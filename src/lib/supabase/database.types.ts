@@ -1184,6 +1184,7 @@ export type Database = {
           batch_year: number;
           campus_type: Database["public"]["Enums"]["campus_type"] | null;
           company_name: string;
+          decided_at: string | null;
           department_code: string;
           id: string;
           is_anonymous: boolean | null;
@@ -1192,6 +1193,7 @@ export type Database = {
           recruitment_year: number | null;
           result: Database["public"]["Enums"]["result_type"] | null;
           role_title: string | null;
+          row_version: number;
           status: Database["public"]["Enums"]["exp_status"];
           submitted_at: string | null;
         };
@@ -1201,6 +1203,7 @@ export type Database = {
       moderation_history: {
         Row: {
           action: Database["public"]["Enums"]["mod_action"];
+          actor_name: string | null;
           actor_role: string;
           created_at: string;
           experience_id: string | null;
@@ -1209,24 +1212,6 @@ export type Database = {
           report_id: string | null;
         };
         ComputedFields: never;
-        Insert: {
-          action?: Database["public"]["Enums"]["mod_action"] | null;
-          actor_role?: string | null;
-          created_at?: string | null;
-          experience_id?: string | null;
-          id?: number | null;
-          reason_code?: Database["public"]["Enums"]["reason_code"] | null;
-          report_id?: string | null;
-        };
-        Update: {
-          action?: Database["public"]["Enums"]["mod_action"] | null;
-          actor_role?: string | null;
-          created_at?: string | null;
-          experience_id?: string | null;
-          id?: number | null;
-          reason_code?: Database["public"]["Enums"]["reason_code"] | null;
-          report_id?: string | null;
-        };
         Relationships: [
           {
             foreignKeyName: "moderation_actions_experience_id_fkey";
@@ -2071,6 +2056,7 @@ export type Database = {
       moderate_experience: {
         Args: {
           p_action: string;
+          p_expected_version?: number;
           p_id: string;
           p_note?: string;
           p_reason?: Database["public"]["Enums"]["reason_code"];
@@ -2171,7 +2157,8 @@ export type Database = {
         | "execute_usn_release";
       campus_type: "on_campus" | "off_campus";
       comment_status: "visible" | "removed";
-      exp_status: "draft" | "pending" | "approved" | "rejected" | "removed" | "withdrawn";
+      exp_status:
+        "draft" | "pending" | "approved" | "rejected" | "returned" | "removed" | "withdrawn";
       mod_action:
         | "submit"
         | "resubmit"
@@ -2186,7 +2173,8 @@ export type Database = {
         | "remove_comment"
         | "restore_comment"
         | "resolve_comment_report"
-        | "dismiss_comment_report";
+        | "dismiss_comment_report"
+        | "return";
       notice_kind: "usn_dispute_opened" | "usn_released";
       opportunity_type: "internship" | "full_time" | "both";
       reason_code: "nda" | "personal_info" | "defamation" | "low_quality" | "duplicate" | "other";
@@ -2331,7 +2319,7 @@ export const Constants = {
       ],
       campus_type: ["on_campus", "off_campus"],
       comment_status: ["visible", "removed"],
-      exp_status: ["draft", "pending", "approved", "rejected", "removed", "withdrawn"],
+      exp_status: ["draft", "pending", "approved", "rejected", "returned", "removed", "withdrawn"],
       mod_action: [
         "submit",
         "resubmit",
@@ -2347,6 +2335,7 @@ export const Constants = {
         "restore_comment",
         "resolve_comment_report",
         "dismiss_comment_report",
+        "return",
       ],
       notice_kind: ["usn_dispute_opened", "usn_released"],
       opportunity_type: ["internship", "full_time", "both"],

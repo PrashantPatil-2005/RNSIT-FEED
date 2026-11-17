@@ -37,21 +37,25 @@ export interface ReferenceData {
   departments: { id: number; code: string; name: string }[];
   batches: { id: number; year: number }[];
   companies: { id: string; name: string; slug: string }[];
+  topics: { id: number; slug: string; name: string }[];
 }
 
 export async function getReferenceData(db: DbClient): Promise<ReferenceData> {
-  const [d, b, c] = await Promise.all([
+  const [d, b, c, t] = await Promise.all([
     db.from("departments").select("id, code, name, active").order("code"),
     db.from("batches").select("id, grad_year").order("grad_year", { ascending: false }),
     db.from("companies").select("id, name, slug").order("name"),
+    db.from("topics").select("id, slug, name").order("name"),
   ]);
   if (d.error) throw new DataError("departments", d.error);
   if (b.error) throw new DataError("batches", b.error);
   if (c.error) throw new DataError("companies", c.error);
+  if (t.error) throw new DataError("topics", t.error);
   return {
     departments: d.data.filter((x) => x.active).map(({ id, code, name }) => ({ id, code, name })),
     batches: b.data.map((x) => ({ id: x.id, year: x.grad_year })),
     companies: c.data,
+    topics: t.data,
   };
 }
 

@@ -11,116 +11,22 @@
 //
 // Usage: node scripts/e2e-auth.mjs
 
-import { execSync, spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import {
+  APP,
+  createChecker,
+  createUser,
+  deleteUser,
+  env,
+  psql,
+  sessionCookies,
+  waitForApp,
+} from "./lib/local.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright-core");
-const { createServerClient } = require("@supabase/ssr");
-
-const APP = "http://127.0.0.1:3100";
-const env = Object.fromEntries(
-  execSync("npx supabase status -o env", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
-    .split(/\r?\n/)
-    .map((l) => /^([A-Z_]+)="?(.*?)"?$/.exec(l))
-    .filter(Boolean)
-    .map((m) => [m[1], m[2]]),
-);
-if (new URL(env.API_URL).hostname !== "127.0.0.1") {
-  console.error("Refusing: Supabase API is not local.");
-  process.exit(2);
-}
-const projectId = /^project_id\s*=\s*"([^"]+)"/m.exec(
-  readFileSync("supabase/config.toml", "utf8"),
-)[1];
-
-let failed = 0;
-const check = (name, ok, detail = "") => {
-  if (!ok) failed += 1;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${ok || !detail ? "" : `\n      ${detail}`}`);
-};
-const psql = (sql) => {
-  const r = spawnSync(
-    "docker",
-    [
-      "exec",
-      "-i",
-      `supabase_db_${projectId}`,
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "postgres",
-      "-X",
-      "-q",
-      "-t",
-      "-A",
-      "-v",
-      "ON_ERROR_STOP=1",
-    ],
-    { input: sql, encoding: "utf8" },
-  );
-  if (r.status !== 0) throw new Error(r.stderr);
-  return r.stdout.trim();
-};
-
-function createUser(label) {
-  const id = randomUUID();
-  const email = `e2e.${label}.${Date.now()}@example.test`;
-  const password = `Synthetic-${randomUUID()}`;
-  psql(`insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-      raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token,
-      email_change_token_new, email_change)
-    values ('00000000-0000-0000-0000-000000000000', '${id}', 'authenticated', 'authenticated', '${email}',
-      extensions.crypt('${password}', extensions.gen_salt('bf')), now(),
-      '{"provider":"email","providers":["email"]}', '{"full_name":"Synthetic E2E ${label}"}', now(), now(), '', '', '', '');`);
-  return { id, email, password };
-}
-
-function deleteUser(id) {
-  psql(`begin;
-    select set_config('app.profile_change', '1', true);
-    update public.profiles set deletion_requested_at = now() where id = '${id}';
-    select public.delete_account_data('${id}');
-    delete from auth.users where id = '${id}';
-    commit;`);
-}
-
-/** Signs in through @supabase/ssr and returns the cookies it would set (same format as the app). */
-async function sessionCookies(user, { expireAccessToken = false } = {}) {
-  const jar = new Map();
-  const client = createServerClient(env.API_URL, env.ANON_KEY, {
-    cookies: {
-      getAll: () => [...jar].map(([name, value]) => ({ name, value })),
-      setAll: (list) =>
-        list.forEach(({ name, value }) => (value ? jar.set(name, value) : jar.delete(name))),
-    },
-  });
-  const { error } = await client.auth.signInWithPassword({
-    email: user.email,
-    password: user.password,
-  });
-  if (error) throw error;
-  if (expireAccessToken) {
-    // Rewrite the stored session so its access token looks expired: the app must refresh it.
-    for (const [name, value] of jar) {
-      if (!value.startsWith("base64-")) continue;
-      const s = JSON.parse(Buffer.from(value.slice(7), "base64url").toString());
-      s.expires_at = Math.floor(Date.now() / 1000) - 60;
-      jar.set(name, `base64-${Buffer.from(JSON.stringify(s)).toString("base64url")}`);
-    }
-  }
-  return [...jar].map(([name, value]) => ({
-    name,
-    value,
-    domain: "127.0.0.1",
-    path: "/",
-    httpOnly: false,
-    sameSite: "Lax",
-  }));
-}
+const { check, failed: failedCount } = createChecker();
+await waitForApp();
 
 const browser = await chromium.launch({ channel: "msedge", headless: true });
 const users = [];
@@ -418,5 +324,7 @@ try {
     }
   }
 }
-console.log(`\n${failed === 0 ? "ALL PASS" : `${failed} FAILED`} (auth e2e, local only)`);
-process.exit(failed ? 1 : 0);
+console.log(
+  `\n${failedCount() === 0 ? "ALL PASS" : `${failedCount()} FAILED`} (auth e2e, local only)`,
+);
+process.exit(failedCount() ? 1 : 0);

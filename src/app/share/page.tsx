@@ -1,17 +1,38 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { ButtonLink } from "@/components/ui/Button";
 import { PlannedFeature } from "@/components/ui/PlannedFeature";
+import { getViewer } from "@/lib/auth/session";
+import { emptyForm } from "@/lib/experience/draft";
+import { EditorPage } from "./EditorPage";
 
-export const metadata: Metadata = { title: "Share an experience" };
+export const metadata: Metadata = { title: "Share an experience", robots: { index: false } };
 
-export default function SharePage() {
+export default async function SharePage() {
+  const viewer = await getViewer();
+  if (viewer && !viewer.profile?.onboarded) redirect("/onboarding?next=/share");
+  if (viewer?.profile && !viewer.profile.deletionRequested) {
+    // A draft row is created only on the first autosave, so visiting this page stores nothing.
+    return (
+      <EditorPage
+        viewer={viewer}
+        draft={{
+          id: null,
+          version: null,
+          form: emptyForm(),
+          status: "draft",
+          moderationNote: null,
+        }}
+      />
+    );
+  }
   return (
     <PlannedFeature
       eyebrow="Contribute"
       title="Share an experience"
       summary="A guided, round-by-round form for verified RNSIT students and alumni to pass on what they learned."
-      noticeTitle="Posting opens with verified sign-in"
-      notice="The form is not open yet, so experiences cannot be submitted and drafts are not saved for now. Reading stays open to everyone in the meantime."
+      noticeTitle="Sign in to share"
+      notice="Sharing needs a verified RNSIT sign-in. Reading stays open to everyone."
       willDo={[
         "Walk through the company, role and each interview round, with the questions in your own words.",
         "Have your draft saved automatically, so you can finish later on any device.",
@@ -20,11 +41,11 @@ export default function SharePage() {
       ]}
       actions={
         <>
+          <ButtonLink href="/sign-in?next=/share" small>
+            Sign in to share
+          </ButtonLink>
           <ButtonLink href="/guidelines" variant="secondary" small>
             Read the content guidelines
-          </ButtonLink>
-          <ButtonLink href="/experiences" variant="secondary" small>
-            Browse experiences
           </ButtonLink>
         </>
       }

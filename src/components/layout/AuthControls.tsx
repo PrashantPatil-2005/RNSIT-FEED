@@ -16,8 +16,14 @@ export async function AuthControls({ variant = "bar" }: { variant?: "bar" | "men
   }
   const needsSetup = !viewer.profile?.onboarded;
   const firstName = viewer.profile?.fullName.split(/\s+/)[0] ?? "Account";
+  const staff = viewer.profile?.role === "moderator" || viewer.profile?.role === "admin";
   return (
     <div className={variant === "bar" ? "auth-bar" : "auth-menu"}>
+      {staff && !needsSetup ? (
+        <Link className={variant === "bar" ? "btn-link" : "nav-link"} href="/moderation">
+          Moderation
+        </Link>
+      ) : null}
       <Link className={linkClass} href={needsSetup ? "/onboarding" : "/account"}>
         {needsSetup ? "Finish setup" : firstName}
         <span className="visually-hidden">{needsSetup ? "" : ", your account"}</span>

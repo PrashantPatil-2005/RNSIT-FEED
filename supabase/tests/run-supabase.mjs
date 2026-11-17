@@ -6,6 +6,7 @@
 //   1. `supabase db reset --local`  -> fresh database with all migrations applied by the Supabase CLI
 //   2. loads the test helpers and the synthetic seed (support/05_supabase_helpers.sql, 10_seed_synthetic.sql)
 //   3. runs every supabase/tests/database/*.test.sql file with psql inside the database container
+//   4. loads the synthetic demo data (scripts/seed-demo.mjs) for the browser tests
 //
 // Usage: node supabase/tests/run-supabase.mjs [substring-filter] [--no-reset]
 
@@ -99,4 +100,13 @@ for (const f of files) {
 console.log(
   `\n${passed} passed, ${failed.length} failed (real local Supabase, container ${container}).`,
 );
-process.exit(failed.length ? 1 : 0);
+
+// Leave the database ready for the browser tests, which need the synthetic demo data. Loaded after
+// the SQL tests so it never influences them.
+const seed = spawnSync(process.execPath, [join(root, "..", "scripts", "seed-demo.mjs")], {
+  cwd: join(root, ".."),
+  encoding: "utf8",
+});
+process.stdout.write(seed.stdout);
+process.stderr.write(seed.stderr);
+process.exit(failed.length || seed.status !== 0 ? 1 : 0);

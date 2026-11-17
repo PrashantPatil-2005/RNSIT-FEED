@@ -27,11 +27,16 @@ async function get(path) {
 // Wait for the server (up to ~30 s).
 for (let i = 0; i < 60; i++) {
   try {
-    await fetch(base);
+    await (await fetch(base)).body?.cancel();
     break;
   } catch {
     await new Promise((r) => setTimeout(r, 500));
   }
+}
+
+if ((await get("/companies/initech-demo")).status !== 200) {
+  console.error("Demo data is missing. Run `npm run test:db` then `npm run db:seed:demo`.");
+  process.exit(2);
 }
 
 const home = await get("/");

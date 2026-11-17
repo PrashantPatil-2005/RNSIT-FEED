@@ -91,6 +91,11 @@ export default async function AccountPage() {
             </li>
           </ul>
 
+          <p>
+            <Link href="/my/experiences">My experiences</Link> · drafts, submissions and published
+            posts.
+          </p>
+
           <form action={signOut}>
             <button type="submit" className="btn btn--secondary">
               Sign out

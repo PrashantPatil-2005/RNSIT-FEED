@@ -3,19 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { Container } from "@/components/layout/Container";
-import { Difficulty } from "@/components/experience/Difficulty";
 import { ResultBadge } from "@/components/experience/ResultBadge";
+import { RoundsList } from "@/components/experience/RoundsList";
 import { Badge } from "@/components/ui/Badge";
 import { NotConfigured } from "@/components/ui/NotConfigured";
 import { SampleBadge, SampleNotice } from "@/components/ui/Sample";
 import { isUuid } from "@/lib/data/filters";
-import {
-  campusLabels,
-  formatDate,
-  opportunityLabels,
-  resultLabels,
-  roundLabels,
-} from "@/lib/data/labels";
+import { campusLabels, formatDate, opportunityLabels, resultLabels } from "@/lib/data/labels";
 import { getExperience } from "@/lib/data/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -103,58 +97,7 @@ export default async function ExperienceDetailPage({ params }: Props) {
 
             <section aria-labelledby="rounds-title" className="stack">
               <h2 id="rounds-title">Interview rounds ({exp.rounds.length})</h2>
-              <ol className="rounds list-reset">
-                {exp.rounds.map((round) => (
-                  <li key={round.id} className="round">
-                    <div className="round__head">
-                      <h3>
-                        <span className="round__num">Round {round.position}</span>
-                        {roundLabels[round.roundType]}
-                      </h3>
-                      <Difficulty value={round.difficulty} />
-                    </div>
-                    {round.durationMin !== null || round.platform || round.topics.length ? (
-                      <dl className="round__facts">
-                        {round.durationMin !== null ? (
-                          <div>
-                            <dt>Duration</dt>
-                            <dd>{round.durationMin} min</dd>
-                          </div>
-                        ) : null}
-                        {round.platform ? (
-                          <div>
-                            <dt>Platform</dt>
-                            <dd>{round.platform}</dd>
-                          </div>
-                        ) : null}
-                        {round.topics.length ? (
-                          <div>
-                            <dt>Topics</dt>
-                            <dd className="cluster cluster--tight">
-                              {round.topics.map((t) => (
-                                <span key={t} className="tag">
-                                  {t.toUpperCase()}
-                                </span>
-                              ))}
-                            </dd>
-                          </div>
-                        ) : null}
-                      </dl>
-                    ) : null}
-                    {round.notes ? <p className="round__notes">{round.notes}</p> : null}
-                    {round.questions.length ? (
-                      <div className="round__questions">
-                        <h4 className="round__subhead">Questions asked</h4>
-                        <ol className="questions">
-                          {round.questions.map((q) => (
-                            <li key={q.id}>{q.body}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
+              <RoundsList rounds={exp.rounds} />
             </section>
 
             {exp.prepTips ? (

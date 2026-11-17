@@ -4,7 +4,11 @@ import { authCookieOptions } from "@/lib/supabase/cookies";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 /** Pages that need a signed-in user. Everything else stays public (reading is open). */
-const PROTECTED_PREFIXES = ["/account", "/onboarding"];
+const PROTECTED_PREFIXES = ["/account", "/onboarding", "/my", "/moderation"];
+/** Draft editing (/share/<id>) is protected; /share itself shows visitors a sign-in prompt. */
+const isProtected = (path: string) =>
+  path.startsWith("/share/") ||
+  PROTECTED_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
 
 /**
  * Runs before matching requests. It refreshes the Supabase session (rotating tokens and rewriting
@@ -35,7 +39,7 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  if (!user && PROTECTED_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))) {
+  if (!user && isProtected(path)) {
     const signIn = request.nextUrl.clone();
     signIn.pathname = "/sign-in";
     signIn.search = `?next=${encodeURIComponent(path)}`;
