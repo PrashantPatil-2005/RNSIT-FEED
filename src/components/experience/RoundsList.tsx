@@ -20,7 +20,7 @@ export function RoundsList({ rounds }: { rounds: RoundView[] }) {
       {rounds.map((round) => (
         <li key={round.id} className="round">
           <div className="round__head">
-            <h3>
+            <h3 className={`round__title round__title--${round.roundType}`}>
               <span className="round__num">Round {round.position}</span>
               {roundLabels[round.roundType]}
             </h3>

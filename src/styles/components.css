@@ -687,6 +687,7 @@
   border: 1px solid var(--color-border-strong);
   flex: none;
 }
+<<<<<<< Updated upstream
 .dot--on {
   background: var(--color-accent);
   border-color: var(--color-accent);
@@ -700,6 +701,20 @@
 }
 .hero__sample strong {
   color: var(--color-fg);
+=======
+.hero__meta dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-highlight);
+}
+/* The one highlighted phrase in the hero title. */
+.hero h1 em {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--color-highlight);
+>>>>>>> Stashed changes
 }
 .home-companies {
   margin-top: var(--space-6);
@@ -977,6 +992,22 @@
   font-weight: 600;
   color: var(--color-fg-muted);
 }
+/* Each round type has its own hue; the title text says the type, so colour is a second cue. */
+.round__title--oa {
+  color: var(--color-round-oa);
+}
+.round__title--technical {
+  color: var(--color-round-technical);
+}
+.round__title--hr {
+  color: var(--color-round-hr);
+}
+.round__title--gd {
+  color: var(--color-round-gd);
+}
+.round__title--managerial {
+  color: var(--color-round-managerial);
+}
 .round__facts {
   display: flex;
   flex-wrap: wrap;
@@ -1003,9 +1034,13 @@
 .round__subhead {
   margin: 0; /* base.css resets h1-h3 only */
   font-size: var(--text-sm);
+<<<<<<< Updated upstream
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-fg-muted);
+=======
+  font-weight: 600;
+>>>>>>> Stashed changes
 }
 .questions {
   display: grid;
@@ -1042,8 +1077,18 @@
   border-radius: 2px;
   background: var(--color-border);
 }
+/* Filled dots take the level's colour: 1–2 easy (green), 3 moderate (amber), 4–5 hard (red). */
 .difficulty__dot--on {
   background: var(--color-fg);
+}
+.difficulty--easy .difficulty__dot--on {
+  background: var(--color-success);
+}
+.difficulty--moderate .difficulty__dot--on {
+  background: var(--color-warn);
+}
+.difficulty--hard .difficulty__dot--on {
+  background: var(--color-danger);
 }
 .difficulty__num {
   font-weight: 600;

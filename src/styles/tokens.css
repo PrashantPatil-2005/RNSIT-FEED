@@ -8,6 +8,7 @@
 :root {
   color-scheme: light dark;
 
+<<<<<<< Updated upstream
   /* Colour */
   --color-bg: #ffffff;
   --color-surface: #fafafa;
@@ -22,6 +23,32 @@
   --color-inverse: #0a0a0a;
   --color-danger: #b91c1c;
   --color-focus: #1d4ed8;
+=======
+  /* Type colour. Headings: teal ink (h1–h2), neutral ink (h3), clay (h4–h6).
+     Highlight: the one warm accent, used sparingly (hero phrase, figures, round labels).
+     Round types: each interview round type has its own hue, used on round titles. */
+  --color-heading: oklch(0.3 0.042 205);
+  --color-heading-minor: oklch(0.48 0.1 45);
+  --color-highlight: oklch(0.5 0.115 42);
+  --color-round-oa: oklch(0.48 0.12 255);
+  --color-round-technical: oklch(0.46 0.075 195);
+  --color-round-hr: oklch(0.5 0.115 42);
+  --color-round-gd: oklch(0.47 0.1 135);
+  --color-round-managerial: oklch(0.48 0.13 345);
+
+  --color-success: var(--green-light);
+  --color-success-soft: oklch(0.96 0.035 150);
+  --color-success-border: oklch(0.82 0.08 150);
+  --color-warn: var(--amber-light);
+  --color-warn-soft: oklch(0.962 0.03 85);
+  --color-warn-border: oklch(0.84 0.1 80);
+  --color-danger: var(--red-light);
+  --color-danger-soft: oklch(0.955 0.02 25);
+  --color-danger-border: oklch(0.82 0.08 25);
+  --color-info: var(--blue-light);
+  --color-info-soft: oklch(0.955 0.02 245);
+  --color-info-border: oklch(0.83 0.07 245);
+>>>>>>> Stashed changes
 
   /* Type */
   --font-sans:
@@ -64,6 +91,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
+<<<<<<< Updated upstream
   :root {
     --color-bg: #0a0a0a;
     --color-surface: #141414;
@@ -80,3 +108,105 @@
     --color-focus: #60a5fa;
   }
 }
+=======
+  :root:not([data-theme="light"]) {
+    --color-bg: var(--gray-950);
+    --color-surface: var(--gray-900);
+    --color-surface-raised: var(--gray-850);
+    --color-surface-sunken: oklch(0.14 0.011 80);
+    --color-fg: oklch(0.96 0.005 80);
+    --color-fg-muted: oklch(0.76 0.014 80);
+    --color-fg-subtle: oklch(0.68 0.014 80);
+    --color-border: var(--gray-800);
+    --color-border-strong: oklch(0.53 0.018 80);
+    --color-accent: var(--teal-400);
+    --color-accent-hover: var(--teal-300);
+    --color-accent-soft: oklch(0.27 0.036 200);
+    --color-accent-soft-border: oklch(0.4 0.06 200);
+    --color-accent-fg: var(--teal-950);
+    --color-inverse: oklch(0.96 0.005 80);
+    --color-on-inverse: var(--gray-950);
+    --color-focus: var(--teal-400);
+    --color-heading: oklch(0.94 0.025 200);
+    --color-heading-minor: oklch(0.8 0.085 55);
+    --color-highlight: oklch(0.8 0.1 50);
+    --color-round-oa: oklch(0.78 0.1 255);
+    --color-round-technical: oklch(0.8 0.08 195);
+    --color-round-hr: oklch(0.8 0.1 50);
+    --color-round-gd: oklch(0.8 0.1 135);
+    --color-round-managerial: oklch(0.78 0.1 345);
+    --color-success: var(--green-dark);
+    --color-success-soft: oklch(0.25 0.045 150);
+    --color-success-border: oklch(0.42 0.08 150);
+    --color-warn: var(--amber-dark);
+    --color-warn-soft: oklch(0.26 0.04 80);
+    --color-warn-border: oklch(0.45 0.08 80);
+    --color-danger: var(--red-dark);
+    --color-danger-soft: oklch(0.26 0.05 25);
+    --color-danger-border: oklch(0.45 0.1 25);
+    --color-info: var(--blue-dark);
+    --color-info-soft: oklch(0.26 0.045 245);
+    --color-info-border: oklch(0.44 0.08 245);
+    --shadow-color: 40 20% 2%;
+    --shadow-xs: 0 0 #0000;
+    --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4);
+    --shadow-md: 0 4px 12px -2px hsl(var(--shadow-color) / 0.5);
+    --shadow-lg: 0 16px 40px -8px hsl(var(--shadow-color) / 0.6);
+    --highlight: inset 0 0 0 0 transparent;
+  }
+}
+
+/* ---------- 2. Semantic: dark (forced by the theme toggle) ---------- */
+:root[data-theme="dark"] {
+  --color-bg: var(--gray-950);
+  --color-surface: var(--gray-900);
+  --color-surface-raised: var(--gray-850);
+  --color-surface-sunken: oklch(0.14 0.011 80);
+  --color-fg: oklch(0.96 0.005 80);
+  --color-fg-muted: oklch(0.76 0.014 80);
+  --color-fg-subtle: oklch(0.68 0.014 80);
+  --color-border: var(--gray-800);
+  --color-border-strong: oklch(0.53 0.018 80);
+  --color-accent: var(--teal-400);
+  --color-accent-hover: var(--teal-300);
+  --color-accent-soft: oklch(0.27 0.036 200);
+  --color-accent-soft-border: oklch(0.4 0.06 200);
+  --color-accent-fg: var(--teal-950);
+  --color-inverse: oklch(0.96 0.005 80);
+  --color-on-inverse: var(--gray-950);
+  --color-focus: var(--teal-400);
+  --color-heading: oklch(0.94 0.025 200);
+  --color-heading-minor: oklch(0.8 0.085 55);
+  --color-highlight: oklch(0.8 0.1 50);
+  --color-round-oa: oklch(0.78 0.1 255);
+  --color-round-technical: oklch(0.8 0.08 195);
+  --color-round-hr: oklch(0.8 0.1 50);
+  --color-round-gd: oklch(0.8 0.1 135);
+  --color-round-managerial: oklch(0.78 0.1 345);
+  --color-success: var(--green-dark);
+  --color-success-soft: oklch(0.25 0.045 150);
+  --color-success-border: oklch(0.42 0.08 150);
+  --color-warn: var(--amber-dark);
+  --color-warn-soft: oklch(0.26 0.04 80);
+  --color-warn-border: oklch(0.45 0.08 80);
+  --color-danger: var(--red-dark);
+  --color-danger-soft: oklch(0.26 0.05 25);
+  --color-danger-border: oklch(0.45 0.1 25);
+  --color-info: var(--blue-dark);
+  --color-info-soft: oklch(0.26 0.045 245);
+  --color-info-border: oklch(0.44 0.08 245);
+  --shadow-color: 40 20% 2%;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4);
+  --shadow-md: 0 4px 12px -2px hsl(var(--shadow-color) / 0.5);
+  --shadow-lg: 0 16px 40px -8px hsl(var(--shadow-color) / 0.6);
+  --highlight: inset 0 0 0 0 transparent;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+>>>>>>> Stashed changes

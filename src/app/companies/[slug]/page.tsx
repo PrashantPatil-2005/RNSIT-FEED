@@ -79,10 +79,12 @@ export default async function CompanyPage({ params, searchParams }: Props) {
                 <dt>Common rounds</dt>
                 <dd>
                   {rounds.length
-                    ? rounds
-                        .slice(0, 3)
-                        .map(([t, n]) => `${roundLabels[t]} (${n})`)
-                        .join(", ")
+                    ? rounds.slice(0, 3).map(([t, n], i) => (
+                        <span key={t}>
+                          {i > 0 ? ", " : null}
+                          <span className={`round__title--${t}`}>{roundLabels[t]}</span> ({n})
+                        </span>
+                      ))
                     : "–"}
                 </dd>
               </div>

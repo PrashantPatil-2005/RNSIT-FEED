@@ -44,6 +44,7 @@ export default async function HomePage() {
     <>
       <section className="hero" aria-labelledby="hero-title">
         <Container>
+<<<<<<< Updated upstream
           <div className="hero__grid">
             <div className="hero__inner">
               <div className="cluster">
@@ -61,6 +62,34 @@ export default async function HomePage() {
                   Explore companies
                 </ButtonLink>
               </div>
+=======
+          <div className="hero__inner">
+            <h1 id="hero-title">
+              Placement experiences from RNSIT seniors, <em>by company.</em>
+            </h1>
+            <p className="lead">
+              Round-by-round accounts of how companies hired at RNSIT: what was asked, how hard it
+              was, and what the outcome was. Written by students and alumni, checked by moderators,
+              free to read.
+            </p>
+            {home ? (
+              <dl className="hero__meta">
+                <div>
+                  <dt>experiences</dt>
+                  <dd>{home.totalPosts}</dd>
+                </div>
+                <div>
+                  <dt>companies</dt>
+                  <dd>{home.coveredCompanies}</dd>
+                </div>
+              </dl>
+            ) : null}
+            <div className="hero__actions">
+              <ButtonLink href="/experiences">Browse experiences</ButtonLink>
+              <ButtonLink href="/companies" variant="secondary">
+                Companies
+              </ButtonLink>
+>>>>>>> Stashed changes
             </div>
             <aside className="hero__panel" aria-labelledby="archive-title">
               <h2 id="archive-title" className="panel__title">

@@ -36,6 +36,26 @@ h3 {
   text-wrap: balance;
 }
 
+<<<<<<< Updated upstream
+=======
+/* Page and section titles are set in the serif; everything at h3 and below stays in the UI sans. */
+h1,
+h2 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.015em;
+  color: var(--color-heading);
+}
+/* h4–h6 are small subheads: sans, clay, so they read as labels rather than titles. */
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  color: var(--color-heading-minor);
+}
+>>>>>>> Stashed changes
 h1 {
   font-size: var(--text-hero);
 }
