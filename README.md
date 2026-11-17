@@ -1,41 +1,53 @@
 # RNSIT-FEED
 
-A free, web-based platform where verified RNSIT students and alumni share structured placement experiences (rounds, questions, preparation tips), organised by company, department, batch and opportunity type. Anyone can read; only verified RNSIT users can post or interact.
+A free, web-based platform designed exclusively for RNSIT students and alumni to share and discover placement experiences, interview questions, preparation strategies and hiring insights.
 
-**Status: planning only.** There is no application code yet. This repository currently holds documentation.
+The goal is to build a centralised knowledge-sharing platform where students can learn from the experiences of their seniors and peers.
 
-> **Which scope is current?** The root [CLAUDE.md](CLAUDE.md) is the authoritative **v1.1** scope. A **v1.2 proposal** exists as a **draft and is not approved**: it takes effect only after the project owner accepts the change request under Section 10 of the scope document.
-> RNSIT FEED is not an official RNSIT platform, and the name "RNSIT" has not yet received written permission (U4).
+## Platform Access
 
-## Documentation
+- **Public access:** Anyone can browse and read published content.
+- **Verified users:** Only verified RNSIT students and alumni can create posts and interact with the platform.
+- **Project ownership:** The project is independently managed. Repository visibility does not grant permission to modify or control the project.
 
-| Document | What it is | Status |
-|---|---|---|
-| [CLAUDE.md](CLAUDE.md) | Problem statement, scope and rules, v1.1 | Authoritative baseline |
-| [docs/archive/CLAUDE.v1.1.md](docs/archive/CLAUDE.v1.1.md) | Byte-for-byte copy of the v1.1 baseline | Archive |
-| [docs/drafts/CLAUDE.v1.2.md](docs/drafts/CLAUDE.v1.2.md) | Proposed v1.2 scope (six-feature MVP) | **Draft, not approved** |
-| [docs/drafts/change-request-v1.2.md](docs/drafts/change-request-v1.2.md) | Text for the v1.2 change-request issue | **Draft, not submitted** |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Proposed schema, access rules, security design | **Draft; design only, nothing implemented** |
-| [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Dev/prod setup, variable names, prerequisites | **Draft; nothing created** |
-| [docs/decisions/DECISION-REGISTER.md](docs/decisions/DECISION-REGISTER.md) | Confirmed decisions and design proposals | Draft |
-| [docs/decisions/UNRESOLVED-DEPENDENCIES.md](docs/decisions/UNRESOLVED-DEPENDENCIES.md) | Open questions and their impact | Draft |
-| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Documentation changelog | Draft |
+## Planned Features
 
-## Proposed MVP (v1.2 draft, not approved)
+- **Verified Accounts:** Registration and verification for RNSIT students and alumni.
+- **Placement Experiences:** Share structured interview experiences, rounds, questions and preparation strategies.
+- **Company Profiles:** Explore company-specific placement information and hiring experiences.
+- **Search & Discovery:** Find experiences by company, department, batch and opportunity type.
+- **Moderation:** Reporting and content moderation to maintain a reliable knowledge-sharing environment.
+- **Privacy Controls:** User profiles and account management with appropriate privacy protections.
 
-1. Verified accounts and profiles
-2. Structured placement experiences (with server-side draft autosave)
-3. Moderation and reporting
-4. Company pages
-5. Public discovery (feed, search, filters)
-6. Trust, privacy and account controls
+## Planned Technology Stack
 
-Upvotes, comments, student company suggestions and other items are unscheduled future scope.
+| Component | Technology |
+|---|---|
+| Frontend | Next.js |
+| Hosting | Vercel |
+| Database | Supabase / PostgreSQL |
+| Authentication | Google Sign-In |
+| Database Security | PostgreSQL RLS |
+| Search | PostgreSQL Full-Text Search |
+| Automation | GitHub Actions |
 
-## Planned stack (target: zero recurring cost; not a guarantee)
+The project aims to operate with zero recurring infrastructure costs using available free tiers, subject to their limitations.
 
-Next.js on Vercel Hobby, Supabase free tier (PostgreSQL, Google sign-in, row-level security), Postgres full-text search, GitHub Actions. Free-tier limits have not yet been verified.
+## Repository Access
 
-## Contributing
+This repository is public for transparency and visibility.
 
-All scope changes go through the Change Process in Section 10 of the scope document. Do not add real student data, USNs or secrets to this repository.
+- Anyone can view and clone the repository.
+- Project decisions, scope and roadmap remain under the project owner's control.
+- External contributions are subject to review and approval.
+- No changes should be considered accepted until explicitly approved.
+
+## Project Status
+
+<escape>**Planning stage — Development has not started.**</escape>
+
+This is an independent student initiative and is not an official RNSIT platform or affiliated with the institute.
+
+## Important
+
+Do not commit real student information, USNs, credentials, API keys or confidential data to this repository.
