@@ -38,6 +38,10 @@ export async function setRoleAction(_prev: ActionState, data: FormData): Promise
   const reason = text(data, "reason");
   if (!isUuid(user) || !isRole(role)) return { error: "Invalid request." };
   if (user === v.user.id) return { error: adminErrorMessage("forbidden") };
+  // Promoting to admin is the most powerful change, so it needs an explicit confirmation.
+  if (role === "admin" && data.get("confirm_admin") !== "yes") {
+    return { error: "Tick the box to confirm making this person an admin." };
+  }
   const bad = reasonError(reason);
   if (bad) return { error: bad };
   const { error } = await v.db.rpc("admin_set_user_role", {
@@ -47,7 +51,12 @@ export async function setRoleAction(_prev: ActionState, data: FormData): Promise
   });
   if (error) return { error: adminErrorMessage(error.message) };
   revalidatePath("/admin", "layout");
-  return { ok: `Role changed to ${roleLabels[role]}.` };
+  return {
+    ok:
+      role === "moderator"
+        ? "Role changed to Moderator. Assign their departments on the Team page."
+        : `Role changed to ${roleLabels[role]}.`,
+  };
 }
 
 export async function correctNameAction(_prev: ActionState, data: FormData): Promise<ActionState> {
@@ -210,4 +219,57 @@ export async function viewAuditAction(_prev: AuditState, data: FormData): Promis
       at: r.created_at,
     })),
   };
+}
+
+function departmentId(data: FormData): number | null {
+  const n = Number(text(data, "department", 6));
+  return Number.isInteger(n) && n > 0 && n < 32768 ? n : null;
+}
+
+/** D-R3: at most four moderators per department, enforced by the database. */
+export async function assignDepartmentAction(
+  _prev: ActionState,
+  data: FormData,
+): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const user = text(data, "user", 40);
+  const dept = departmentId(data);
+  const reason = text(data, "reason");
+  if (!isUuid(user)) return { error: "Choose a moderator." };
+  if (dept === null) return { error: "Choose a department." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { error } = await v.db.rpc("admin_assign_moderator_department", {
+    p_user: user,
+    p_department: dept,
+    p_reason: reason,
+  });
+  if (error) return { error: adminErrorMessage(error.message, "department") };
+  revalidatePath("/admin", "layout");
+  revalidatePath("/moderation");
+  return { ok: "Department assigned." };
+}
+
+export async function unassignDepartmentAction(
+  _prev: ActionState,
+  data: FormData,
+): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const user = text(data, "user", 40);
+  const dept = departmentId(data);
+  const reason = text(data, "reason");
+  if (!isUuid(user) || dept === null) return { error: "Invalid request." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { error } = await v.db.rpc("admin_unassign_moderator_department", {
+    p_user: user,
+    p_department: dept,
+    p_reason: reason,
+  });
+  if (error) return { error: adminErrorMessage(error.message, "department") };
+  revalidatePath("/admin", "layout");
+  revalidatePath("/moderation");
+  return { ok: "Removed from the department." };
 }

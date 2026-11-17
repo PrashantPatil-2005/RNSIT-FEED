@@ -28,6 +28,7 @@ export function isRole(v: unknown): v is UserRole {
 export const ADMIN_SECTIONS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/users", label: "Users and roles" },
+  { href: "/admin/team", label: "Moderator team" },
   { href: "/admin/invites", label: "Alumni invites" },
   { href: "/admin/companies", label: "Companies" },
   { href: "/admin/audit", label: "Audit log" },
@@ -48,17 +49,31 @@ export const auditActionLabels: Record<string, string> = {
   execute_usn_release: "USN released",
   invite_alumnus: "Alumnus invited",
   revoke_alumni_invite: "Alumni invite revoked",
+  assign_moderator_department: "Moderator assigned to department",
+  unassign_moderator_department: "Moderator removed from department",
+  moderator_step_down: "Moderator stepped down",
 };
 
-/** Maps database error codes raised by the admin functions to fixed, safe messages. */
-export function adminErrorMessage(raw: string): string {
+/**
+ * Maps database error codes raised by the admin functions to fixed, safe messages. `context`
+ * picks the right wording where one code means different limits (two admins; four moderators per
+ * department).
+ */
+export function adminErrorMessage(raw: string, context: "role" | "department" = "role"): string {
   const known: [string, string][] = [
     ["reason_required", "Write a reason of at least 10 characters. It is kept in the audit log."],
     [
       "reason_has_email",
       "Do not put an email address in the reason; the audit log must not hold one.",
     ],
-    ["limit_reached", "There can be at most two admins."],
+    [
+      "limit_reached",
+      context === "department"
+        ? "This department already has four moderators. Remove one first."
+        : "There can be at most two admins.",
+    ],
+    ["not_moderator", "Only moderators can cover a department. Make them a moderator first."],
+    ["already_assigned", "This moderator already covers that department."],
     ["last_admin", "The last admin cannot be removed. Appoint another admin first."],
     ["not_needed", "College addresses can sign in directly; they do not need an invite."],
     ["already_registered", "An account with this address already exists."],

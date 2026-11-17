@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { classifyOAuthError, type AuthErrorCode } from "@/lib/auth/errors";
-import { safeNextPath } from "@/lib/auth/redirect";
+import { homeForRole } from "@/lib/auth/permissions";
+import { postSignInPath, safeNextPath } from "@/lib/auth/redirect";
 import { getSiteUrl } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * OAuth return point. Exchanges the one-time code (PKCE) for a session, then sends the user to
- * onboarding or to their destination. All redirects use SITE_URL as the base and a validated
+ * onboarding, to their requested destination, or to their role's home page. All redirects use SITE_URL as the base and a validated
  * relative path, so this route cannot be used as an open redirect.
  */
 export async function GET(request: NextRequest) {
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
 
   const { data: profile } = await db
     .from("profiles")
-    .select("onboarded_at")
+    .select("onboarded_at, role")
     .eq("id", user.id)
     .maybeSingle();
   if (!profile) {
@@ -43,7 +44,13 @@ export async function GET(request: NextRequest) {
     return fail("profile_missing");
   }
 
-  const next = safeNextPath(params.get("next"));
-  const destination = profile.onboarded_at ? next : `/onboarding?next=${encodeURIComponent(next)}`;
+  // An explicit safe `next` wins; otherwise each role lands on its own home page (D-R1).
+  // New accounts go through onboarding first, keeping any explicit destination.
+  const rawNext = params.get("next");
+  const destination = profile.onboarded_at
+    ? postSignInPath(rawNext, homeForRole(profile.role))
+    : rawNext
+      ? `/onboarding?next=${encodeURIComponent(safeNextPath(rawNext))}`
+      : "/onboarding";
   return NextResponse.redirect(new URL(destination, site));
 }

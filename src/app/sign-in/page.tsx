@@ -5,8 +5,10 @@ import { signInWithGoogle } from "@/app/auth/actions";
 import { Container } from "@/components/layout/Container";
 import { Notice } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { site } from "@/config/site";
 import { isGoogleEnabled } from "@/lib/auth/providers";
-import { safeNextPath } from "@/lib/auth/redirect";
+import { homeForRole } from "@/lib/auth/permissions";
+import { postSignInPath, safeNextPath } from "@/lib/auth/redirect";
 import { getViewer } from "@/lib/auth/session";
 import { getSiteUrl } from "@/lib/supabase/env";
 
@@ -18,9 +20,15 @@ export default async function SignInPage({
   searchParams: Promise<{ next?: string | string[] }>;
 }) {
   const raw = (await searchParams).next;
-  const next = safeNextPath(Array.isArray(raw) ? raw[0] : raw);
+  // Empty when no safe destination was asked for: the callback then uses the role's home page.
+  const next = safeNextPath(Array.isArray(raw) ? raw[0] : raw, "");
   const viewer = await getViewer();
-  if (viewer) redirect(viewer.profile?.onboarded ? next : "/onboarding");
+  if (viewer)
+    redirect(
+      viewer.profile?.onboarded
+        ? postSignInPath(next, homeForRole(viewer.profile.role))
+        : "/onboarding",
+    );
 
   const available = getSiteUrl() !== null && (await isGoogleEnabled());
 
@@ -36,8 +44,8 @@ export default async function SignInPage({
           <div className="panel stack">
             <h2 className="h-small">Continue with your college Google account</h2>
             <p className="muted">
-              Only verified RNSIT Google accounts can join. Personal Gmail accounts are refused by
-              the server.
+              Use your @{site.collegeDomain} Google account. Other accounts, including personal
+              Gmail, are refused by the server unless an admin has invited you as an alumnus.
             </p>
             <form action={signInWithGoogle}>
               <input type="hidden" name="next" value={next} />
@@ -57,12 +65,21 @@ export default async function SignInPage({
             )}
           </div>
 
-          <Notice title="Registration is not open yet">
-            <p>
-              The official college email domain has not been confirmed, so new accounts cannot be
-              created on the live site. Nothing is stored if a sign-in is refused.
-            </p>
-          </Notice>
+          {available ? (
+            <Notice title="Graduated?">
+              <p>
+                If you no longer have a college account, an admin can invite the personal Google
+                address you want to use. The invite works once and expires after 14 days. Nothing is
+                stored if a sign-in is refused.
+              </p>
+            </Notice>
+          ) : (
+            <Notice title="Registration is not open yet">
+              <p>
+                New accounts cannot be created here yet. Nothing is stored if a sign-in is refused.
+              </p>
+            </Notice>
+          )}
 
           <section className="stack" aria-labelledby="what-we-keep">
             <h2 id="what-we-keep" className="h-small">

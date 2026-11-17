@@ -14,6 +14,7 @@ import {
   sessionCookies,
   setRole,
   waitForApp,
+  waitForFormReset,
 } from "./lib/local.mjs";
 
 const require = createRequire(import.meta.url);
@@ -80,7 +81,29 @@ try {
 
   // ---------- Overview ----------
   await p.goto(`${APP}/`);
-  check("admin: header shows Admin", await p.locator(".header-actions >> text=Admin").isVisible());
+  await p.click(".header-actions .staff-menu__summary");
+  const adminMenu = (await p.textContent(".header-actions .staff-menu__list")) ?? "";
+  check(
+    "admin: Staff menu shows admin and moderation links",
+    adminMenu.includes("Admin dashboard") &&
+      adminMenu.includes("Users and roles") &&
+      adminMenu.includes("Moderation queue"),
+    adminMenu,
+  );
+  await p.keyboard.press("Escape");
+  check(
+    "admin: Escape closes the Staff menu",
+    !(await p.locator(".header-actions .staff-menu__list").isVisible()),
+  );
+  await p.goto(`${APP}/sign-in`);
+  check("admin: signed-in /sign-in lands on /admin", p.url() === `${APP}/admin`, p.url());
+  await p.goto(`${APP}/sign-in?next=${encodeURIComponent("/companies")}`);
+  check("admin: explicit next still wins", p.url() === `${APP}/companies`, p.url());
+  await p.goto(`${APP}/account`);
+  check(
+    "admin: account shows the role card",
+    ((await p.textContent(".role-card")) ?? "").includes("Your role: Admin"),
+  );
   await p.goto(`${APP}/admin`, { waitUntil: "networkidle" });
   const overview = (await p.textContent("main")) ?? "";
   check(
@@ -135,6 +158,15 @@ try {
   await form.locator("input[name=reason]").fill("Trying to add a third admin here");
   await form.locator("button[type=submit]").click();
   await form.locator(".form__error").waitFor();
+  check(
+    "making an admin needs the confirmation tick",
+    (await form.locator(".form__error").textContent())?.includes(
+      "confirm making this person an admin",
+    ) && role(student.id) === "moderator",
+  );
+  await form.locator("input[name=confirm_admin]").check();
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__error", { hasText: "at most two admins" }).waitFor();
   check(
     "admin limit enforced (at most two)",
     (await form.locator(".form__error").textContent())?.includes("at most two admins") &&
@@ -249,6 +281,7 @@ try {
   await cf.locator("input[name=reason]").fill("New recruiter visiting campus");
   await cf.locator("button[type=submit]").click();
   await cf.locator(".form__ok").waitFor();
+  await waitForFormReset(cf, "input[name=name]");
   const slug = psql(`select slug from public.companies where name = '${companyName}'`);
   check("company created with a generated address", slug === `e2e-admin-co-${tag}`, slug);
   check("company page is public", (await fetch(`${APP}/companies/${slug}`)).status === 200);

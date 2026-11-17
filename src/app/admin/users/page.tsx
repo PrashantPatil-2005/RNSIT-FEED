@@ -4,6 +4,7 @@ import { AdminNav } from "@/components/admin/AdminNav";
 import { Container } from "@/components/layout/Container";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
+import Link from "next/link";
 import { isRole, ROLES, roleLabels, rolePlurals } from "@/lib/admin/labels";
 import { requireAdmin } from "@/lib/auth/staff";
 import { getReferenceData } from "@/lib/data/queries";
@@ -27,6 +28,13 @@ export default async function AdminUsersPage({
   const q = first(sp.q).trim().slice(0, 80);
   const roleRaw = first(sp.role);
   const role = isRole(roleRaw) ? roleRaw : null;
+  const historyRaw = first(sp.history);
+  const historyFor = /^[0-9a-f-]{36}$/i.test(historyRaw) ? historyRaw : null;
+  const keep = (extra: Record<string, string>) => {
+    const qs = new URLSearchParams({ ...(q ? { q } : {}), ...(role ? { role } : {}), ...extra });
+    const str = qs.toString();
+    return str ? `/admin/users?${str}` : "/admin/users";
+  };
 
   // Admin-only read (RLS profiles_read_admin). No email or USN is selected or shown here.
   let query = viewer.db
@@ -38,7 +46,14 @@ export default async function AdminUsersPage({
     .limit(LIMIT);
   if (q) query = query.ilike("full_name", `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
   if (role) query = query.eq("role", role);
-  const [{ data: people, error }, ref] = await Promise.all([query, getReferenceData(viewer.db)]);
+  const [{ data: people, error }, ref, history] = await Promise.all([
+    query,
+    getReferenceData(viewer.db),
+    historyFor
+      ? viewer.db.rpc("admin_user_role_history", { p_user: historyFor })
+      : Promise.resolve(null),
+  ]);
+  const historyName = historyFor ? people?.find((x) => x.id === historyFor)?.full_name : undefined;
 
   const dept = (id: number | null) => ref.departments.find((d) => d.id === id)?.code ?? "—";
   const batch = (id: number | null) => ref.batches.find((b) => b.id === id)?.year ?? "—";
@@ -81,6 +96,47 @@ export default async function AdminUsersPage({
             </div>
           </form>
 
+          {historyFor ? (
+            <section className="panel stack" aria-labelledby="history-title">
+              <h2 id="history-title" className="panel__title">
+                Role history{historyName ? ` · ${historyName}` : ""}
+              </h2>
+              {history?.error ? (
+                <p>The history could not be loaded.</p>
+              ) : !history?.data || history.data.length === 0 ? (
+                <p className="muted">
+                  No recorded role changes. History is kept from migration 019 onward.
+                </p>
+              ) : (
+                <ol className="role-history list-reset">
+                  {history.data.map((h, i) => (
+                    <li key={`${h.created_at}-${i}`}>
+                      <strong>
+                        {roleLabels[h.old_role]} → {roleLabels[h.new_role]}
+                      </strong>{" "}
+                      <span className="muted">
+                        ·{" "}
+                        {h.self_service
+                          ? "stepped down themselves"
+                          : `by ${h.changed_by_name ?? "a deleted account"}`}{" "}
+                        ·{" "}
+                        {new Intl.DateTimeFormat("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        }).format(new Date(h.created_at))}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              <p className="muted">
+                Reasons are in the <Link href="/admin/audit">audit log</Link>.{" "}
+                <Link href={keep({})}>Close</Link>
+              </p>
+            </section>
+          ) : null}
+
           {error ? (
             <StateMessage kind="error" title="Users could not be loaded">
               <p>Please reload the page.</p>
@@ -113,6 +169,7 @@ export default async function AdminUsersPage({
                             {dept(p.department_id)} · Batch {batch(p.batch_id)}
                           </span>
                           <span>Joined {joined(p.created_at)}</span>
+                          <Link href={keep({ history: p.id })}>Role history</Link>
                           {p.onboarded_at ? null : <span>Setup not finished</span>}
                           {p.deletion_requested_at ? <span>Deletion requested</span> : null}
                         </p>
@@ -136,6 +193,18 @@ export default async function AdminUsersPage({
                                     </option>
                                   ))}
                                 </select>
+                              </div>
+                              <div className="check">
+                                <input
+                                  id={`confirm-admin-${p.id}`}
+                                  name="confirm_admin"
+                                  type="checkbox"
+                                  value="yes"
+                                />
+                                <label htmlFor={`confirm-admin-${p.id}`}>
+                                  Only if choosing Admin: I confirm. Admins manage roles, read the
+                                  audit log and can reveal anonymous authors. At most two.
+                                </label>
                               </div>
                               <ReasonField id={`role-reason-${p.id}`} />
                             </ActionForm>
