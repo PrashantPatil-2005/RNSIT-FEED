@@ -1,0 +1,82 @@
+/*
+ * Design tokens. Black and white, one restrained blue accent.
+ * Change values here, not in components.
+ * Contrast notes (WCAG AA needs 4.5:1 for body text):
+ *   light: #525252 on #ffffff = 7.8:1, #1d4ed8 on #ffffff = 6.7:1
+ *   dark:  #a3a3a3 on #0a0a0a = 7.5:1, #60a5fa on #0a0a0a = 7.6:1
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Colour */
+  --color-bg: #ffffff;
+  --color-surface: #fafafa;
+  --color-fg: #0a0a0a;
+  --color-fg-muted: #525252;
+  --color-border: #e5e5e5;
+  --color-border-strong: #a3a3a3;
+  --color-accent: #1d4ed8;
+  --color-accent-hover: #1e40af;
+  --color-accent-soft: #eff4ff;
+  --color-on-inverse: #ffffff;
+  --color-inverse: #0a0a0a;
+  --color-danger: #b91c1c;
+  --color-focus: #1d4ed8;
+
+  /* Type */
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-hero: clamp(2.125rem, 1.4rem + 3.2vw, 3.5rem);
+  --leading-tight: 1.15;
+  --leading-body: 1.6;
+  --measure: 65ch;
+
+  /* Space (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: 6rem;
+
+  /* Shape and layout */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --border: 1px solid var(--color-border);
+  --max-width: 72rem;
+  --gutter: 1rem;
+  --header-height: 3.5rem;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --gutter: 1.5rem;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0a0a0a;
+    --color-surface: #141414;
+    --color-fg: #fafafa;
+    --color-fg-muted: #a3a3a3;
+    --color-border: #262626;
+    --color-border-strong: #525252;
+    --color-accent: #60a5fa;
+    --color-accent-hover: #93c5fd;
+    --color-accent-soft: #0f1b33;
+    --color-on-inverse: #0a0a0a;
+    --color-inverse: #fafafa;
+    --color-danger: #f87171;
+    --color-focus: #60a5fa;
+  }
+}
