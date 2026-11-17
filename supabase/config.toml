@@ -343,7 +343,7 @@ max_frequency = "5s"
 # Eligibility is NOT decided here: the database guard (migrations 005/011) refuses every sign-up
 # unless private.settings.allowed_email_domain is set, and production leaves it unset (U1/U2/U11).
 [auth.external.google]
-enabled = false
+enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 redirect_uri = ""

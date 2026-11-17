@@ -33,10 +33,12 @@ begin
   perform test.assert((select count(*) from public.moderation_reports) = 0, 'a non-staff student sees no reports');
   perform test.reset();
 
-  -- Reject needs a reason; rejected is not public; the author sees the note and history
+  -- Requesting changes needs a reason and a note (SC-2); returned is not public; the author sees
+  -- the note and history
   perform test.as_user(test.moderator());
-  perform test.expect_error(format($f$ select public.moderate_experience(%L, 'reject') $f$, v_pending), 'reason_required');
-  perform public.moderate_experience(v_pending, 'reject', 'low_quality', 'Please add more detail to the rounds.');
+  perform test.expect_error(format($f$ select public.moderate_experience(%L, 'return') $f$, v_pending), 'reason_required');
+  perform test.expect_error(format($f$ select public.moderate_experience(%L, 'return', 'low_quality') $f$, v_pending), 'note_required');
+  perform public.moderate_experience(v_pending, 'return', 'low_quality', 'Please add more detail to the rounds.');
   perform test.reset();
   v_rejected := v_pending;
 
@@ -46,9 +48,10 @@ begin
   perform test.reset();
 
   perform test.as_user(test.alice());
-  perform test.assert((select moderation_note from public.my_experiences where id = v_rejected) = 'Please add more detail to the rounds.', 'author can read the rejection note');
-  perform test.assert((select count(*) from public.my_moderation_feedback where experience_id = v_rejected and action = 'reject') = 1, 'author sees the history');
-  -- Rejected posts can be corrected and resubmitted
+  perform test.assert((select status from public.my_experiences where id = v_rejected) = 'returned', 'status is returned');
+  perform test.assert((select moderation_note from public.my_experiences where id = v_rejected) = 'Please add more detail to the rounds.', 'author can read the note');
+  perform test.assert((select count(*) from public.my_moderation_feedback where experience_id = v_rejected and action = 'return') = 1, 'author sees the history');
+  -- Returned posts can be corrected and resubmitted
   perform public.save_draft(v_rejected, (select row_version from public.my_experiences where id = v_rejected), '{"prep_tips":"More detail added"}'::jsonb);
   perform public.submit_experience(v_rejected);
   perform test.reset();

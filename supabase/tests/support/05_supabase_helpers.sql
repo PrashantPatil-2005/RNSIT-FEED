@@ -77,7 +77,7 @@ begin
   perform test.as_user(p_author);
   v_res := public.save_draft(null, null, jsonb_build_object(
     'company_id', (select c.id from public.companies c where c.slug = p_company_slug),
-    'role_title', 'SDE Synthetic',
+    'role_title', 'SDE Synthetic ' || left(gen_random_uuid()::text, 8),  -- unique: avoids the per-author duplicate guard (migration 012)
     'opportunity_type', 'full_time',
     'campus_type', 'on_campus',
     'recruitment_year', 2026,

@@ -332,6 +332,49 @@ if (token) {
     mod.status === 200 && Array.isArray(mod.json) && mod.json.length === 0,
     short(mod),
   );
+
+  // Phase 3: moderation is database-enforced for API callers too.
+  const hist = await call("/rest/v1/moderation_history?select=id", { token });
+  record(
+    "student gets zero moderation history rows",
+    hist.status === 200 && Array.isArray(hist.json) && hist.json.length === 0,
+    short(hist),
+  );
+  // require_staff() runs before any lookup, so any id proves the refusal.
+  const someId = randomUUID();
+  for (const action of ["approve", "return", "reject", "remove"]) {
+    const r = await call("/rest/v1/rpc/moderate_experience", {
+      method: "POST",
+      token,
+      body: {
+        p_id: someId,
+        p_action: action,
+        p_reason: "other",
+        p_note: "Student attempt at moderation",
+      },
+    });
+    record(
+      `student cannot ${action} via the API`,
+      r.status >= 400 && JSON.stringify(r.json).includes("forbidden"),
+      short(r),
+    );
+  }
+  const det = await call("/rest/v1/rpc/moderation_experience_detail", {
+    method: "POST",
+    token,
+    body: { p_id: someId },
+  });
+  record("student cannot read moderation detail", det.status >= 400, short(det));
+  const patch = await call(`/rest/v1/experiences?id=eq.${someId}`, {
+    method: "PATCH",
+    token,
+    body: { status: "approved" },
+  });
+  record(
+    "student cannot PATCH experience status",
+    denied(patch) || patch.status >= 400,
+    short(patch),
+  );
 }
 
 // Forged JWT (wrong signature) is rejected
