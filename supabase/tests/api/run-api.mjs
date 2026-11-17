@@ -123,6 +123,9 @@ for (const [fn, body] of [
     { p_user: randomUUID(), p_role: "admin", p_reason: "attempted escalation" },
   ],
   ["delete_account_data", { p_user: randomUUID() }],
+  ["admin_invite_alumnus", { p_email: "alum.api@gmail.com", p_reason: "Anonymous invite attempt" }],
+  ["admin_list_alumni_invites", {}],
+  ["purge_expired_alumni_invites", {}],
   ["purge_expired_drafts", { p_days: 1 }],
   ["hook_before_user_created", { event: { user: { email: "a@example.test" } } }],
 ]) {
@@ -374,6 +377,61 @@ if (token) {
     "student cannot PATCH experience status",
     denied(patch) || patch.status >= 400,
     short(patch),
+  );
+
+  // Alumni invites (U3): admin-only through the API as well.
+  const inv = await call("/rest/v1/rpc/admin_invite_alumnus", {
+    method: "POST",
+    token,
+    body: { p_email: "alum.student.try@gmail.com", p_reason: "Student invite attempt here" },
+  });
+  record(
+    "student cannot invite an alumnus",
+    inv.status >= 400 && JSON.stringify(inv.json).includes("forbidden"),
+    short(inv),
+  );
+  const lst = await call("/rest/v1/rpc/admin_list_alumni_invites", { method: "POST", token });
+  record("student cannot list alumni invites", lst.status >= 400, short(lst));
+  const tbl = await call("/rest/v1/alumni_invites?select=*", {
+    token,
+    headers: { "Accept-Profile": "private" },
+  });
+  record("alumni invite table unreachable", denied(tbl), short(tbl));
+}
+
+// An invite never bypasses Google verification: an email/password sign-up for an invited address
+// is refused by the hook and the trigger.
+{
+  const invited = `alum.api.${Date.now()}@gmail.com`;
+  const ins = spawnSync(
+    "docker",
+    [
+      "exec",
+      "-i",
+      `supabase_db_${projectId}`,
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-X",
+      "-q",
+      "-v",
+      "ON_ERROR_STOP=1",
+    ],
+    {
+      input: `insert into private.alumni_invites (email, expires_at) values ('${invited}', now() + interval '1 day');`,
+      encoding: "utf8",
+    },
+  );
+  const r = await call("/auth/v1/signup", {
+    method: "POST",
+    body: { email: invited, password: pw, data: { email_verified: true } },
+  });
+  record(
+    "invited address cannot sign up without Google (email/password refused)",
+    ins.status === 0 && r.status >= 400,
+    `${ins.stderr} ${short(r)}`,
   );
 }
 

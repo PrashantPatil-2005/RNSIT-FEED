@@ -1992,6 +1992,19 @@ export type Database = {
         Returns: string;
       };
       admin_get_usn: { Args: { p_reason: string; p_user: string }; Returns: string };
+      admin_invite_alumnus: { Args: { p_email: string; p_reason: string }; Returns: string };
+      admin_list_alumni_invites: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          created_at: string;
+          email_masked: string;
+          expires_at: string;
+          id: string;
+          revoked_at: string;
+          status: string;
+          used_at: string;
+        }[];
+      };
       admin_list_audit: {
         Args: { p_limit?: number; p_reason: string };
         Returns: {
@@ -2008,6 +2021,7 @@ export type Database = {
         }[];
       };
       admin_reveal_author: { Args: { p_experience: string; p_reason: string }; Returns: Json };
+      admin_revoke_alumni_invite: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_set_user_role: {
         Args: {
           p_reason: string;
@@ -2066,6 +2080,7 @@ export type Database = {
       moderation_experience_detail: { Args: { p_id: string }; Returns: Json };
       object_to_usn_release: { Args: { p_case: string }; Returns: undefined };
       purge_deletion_ledger: { Args: { p_days?: number }; Returns: number };
+      purge_expired_alumni_invites: { Args: Record<PropertyKey, never>; Returns: number };
       purge_expired_drafts: { Args: { p_days?: number }; Returns: number };
       purge_rejected_experiences: { Args: { p_days?: number }; Returns: number };
       report_comment: {
@@ -2154,7 +2169,9 @@ export type Database = {
         | "notify_usn_holder"
         | "approve_usn_case"
         | "deny_usn_case"
-        | "execute_usn_release";
+        | "execute_usn_release"
+        | "invite_alumnus"
+        | "revoke_alumni_invite";
       campus_type: "on_campus" | "off_campus";
       comment_status: "visible" | "removed";
       exp_status:
@@ -2316,6 +2333,8 @@ export const Constants = {
         "approve_usn_case",
         "deny_usn_case",
         "execute_usn_release",
+        "invite_alumnus",
+        "revoke_alumni_invite",
       ],
       campus_type: ["on_campus", "off_campus"],
       comment_status: ["visible", "removed"],

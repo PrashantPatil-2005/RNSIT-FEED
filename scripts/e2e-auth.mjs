@@ -50,14 +50,22 @@ try {
     "header shows Sign in for visitors",
     await page.locator(".header-actions >> text=Sign in").isVisible(),
   );
+  // The button must reflect the Auth server's real setting, whichever way it is configured.
+  const googleOn =
+    (
+      await (
+        await fetch(`${env.API_URL}/auth/v1/settings`, { headers: { apikey: env.ANON_KEY } })
+      ).json()
+    ).external?.google === true;
   const googleBtn = page.locator("button:has-text('Continue with Google')");
+  const mainText = (await page.textContent("main")) ?? "";
   check(
-    "Google button disabled while the provider is not configured",
-    await googleBtn.isDisabled(),
+    `Google button ${googleOn ? "enabled" : "disabled"} (provider ${googleOn ? "on" : "off"})`,
+    (await googleBtn.isDisabled()) === !googleOn,
   );
   check(
-    "explains Google is not configured",
-    (await page.textContent("main"))?.includes("not configured in this environment"),
+    `"not configured" note ${googleOn ? "absent" : "shown"} accordingly`,
+    mainText.includes("not configured in this environment") === !googleOn,
   );
 
   // ---------- Open-redirect protection (sign-in next parameter) ----------

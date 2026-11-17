@@ -111,6 +111,7 @@ begin
       'admin_usn_case_deny', 'admin_usn_case_execute',
       'cancel_submission', 'set_helpful_vote', 'add_comment', 'delete_my_comment', 'report_comment',
       'moderate_comment', 'resolve_comment_report',
+      'admin_invite_alumnus', 'admin_revoke_alumni_invite', 'admin_list_alumni_invites',
       'is_admin', 'is_staff', 'uid'   -- uid is auth.uid(), outside these schemas; listed for clarity
     );
   perform test.assert(v_bad is null, 'authenticated can execute unexpected functions: ' || coalesce(v_bad, ''));
@@ -121,6 +122,8 @@ begin
   perform test.assert(not has_function_privilege('authenticated', 'public.purge_expired_drafts(integer)', 'execute'), 'purge is service-role only');
   perform test.assert(not has_function_privilege('authenticated', 'public.purge_rejected_experiences(integer)', 'execute'), 'rejected purge is service-role only');
   perform test.assert(has_function_privilege('service_role', 'public.purge_rejected_experiences(integer)', 'execute'), 'service role can purge rejected posts');
+  perform test.assert(not has_function_privilege('authenticated', 'public.purge_expired_alumni_invites()', 'execute'), 'invite purge is service-role only');
+  perform test.assert(has_function_privilege('service_role', 'public.purge_expired_alumni_invites()', 'execute'), 'service role can purge expired invites');
   perform test.assert(not has_function_privilege('anon', 'public.hook_before_user_created(jsonb)', 'execute'), 'the hook is not callable by anon');
   perform test.assert(has_function_privilege('supabase_auth_admin', 'public.hook_before_user_created(jsonb)', 'execute'), 'the hook is callable by the auth service');
   perform test.assert(not has_function_privilege('authenticated', 'private.bootstrap_admin(uuid,text)', 'execute'), 'bootstrap is owner-only');
