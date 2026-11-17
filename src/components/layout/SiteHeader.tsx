@@ -3,6 +3,7 @@ import { AuthControls } from "@/components/layout/AuthControls";
 import { Container } from "@/components/layout/Container";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NavLinks } from "@/components/layout/NavLinks";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { primaryNav, site } from "@/config/site";
 
 export function SiteHeader() {
@@ -10,7 +11,9 @@ export function SiteHeader() {
     <header className="site-header">
       <Container className="site-header__inner">
         <Link href="/" className="brand" aria-label={`${site.name}, home`}>
-          <span className="brand__mark" aria-hidden="true" />
+          <span className="brand__mark" aria-hidden="true">
+            F
+          </span>
           <span>
             RNSIT <span className="brand__sub">FEED</span>
           </span>
@@ -21,6 +24,7 @@ export function SiteHeader() {
         </div>
 
         <div className="header-actions">
+          <ThemeToggle />
           <AuthControls />
         </div>
 

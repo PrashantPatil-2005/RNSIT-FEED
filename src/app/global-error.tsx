@@ -15,7 +15,7 @@ export default function GlobalError({
   return (
     <html lang="en">
       <body>
-        <main className="container" style={{ paddingBlock: "4rem" }}>
+        <main className="container section">
           <StateMessage
             kind="error"
             title="Something went seriously wrong"

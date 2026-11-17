@@ -42,23 +42,46 @@ export default async function ModerationQueuePage({
   const filter: QueueFilter = isQueueFilter(raw) ? raw : "pending";
   const done = typeof sp.done === "string" ? doneMessages[sp.done] : undefined;
 
+  // Soft department scope (D-R2): a moderator's queue opens on their own departments; "All
+  // departments" is always one click away and nothing is hidden from them by the database.
+  const [{ data: myDepts }, { data: activity }] = await Promise.all([
+    viewer.db.rpc("my_moderator_departments"),
+    viewer.db.rpc("my_moderation_activity", { p_days: 7 }),
+  ]);
+  const myCodes = (myDepts ?? []).map((d) => d.code);
+  const wantsAll = sp.scope === "all";
+  const scoped = myCodes.length > 0 && !wantsAll;
+  const href = (status: QueueFilter, all = wantsAll) => {
+    const q = new URLSearchParams();
+    if (status !== "pending") q.set("status", status);
+    if (all && myCodes.length > 0) q.set("scope", "all");
+    const qs = q.toString();
+    return qs ? `/moderation?${qs}` : "/moderation";
+  };
+
   // The view returns rows only for staff (private.is_staff()); counts use the same view.
+  const inScope = <T extends { in: (col: string, values: string[]) => T }>(q: T): T =>
+    scoped ? q.in("department_code", myCodes) : q;
   const [list, ...counts] = await Promise.all([
-    viewer.db
-      .from("moderation_experiences")
-      .select(
-        "id, status, company_name, role_title, opportunity_type, department_code, batch_year, recruitment_year, is_anonymous, author_name, submitted_at, decided_at",
-      )
-      .eq("status", filter)
+    inScope(
+      viewer.db
+        .from("moderation_experiences")
+        .select(
+          "id, status, company_name, role_title, opportunity_type, department_code, batch_year, recruitment_year, is_anonymous, author_name, submitted_at, decided_at",
+        )
+        .eq("status", filter),
+    )
       .order(filter === "pending" ? "submitted_at" : "decided_at", {
         ascending: filter === "pending",
       })
       .limit(100),
     ...QUEUE_FILTERS.map((s) =>
-      viewer.db
-        .from("moderation_experiences")
-        .select("id", { count: "exact", head: true })
-        .eq("status", s),
+      inScope(
+        viewer.db
+          .from("moderation_experiences")
+          .select("id", { count: "exact", head: true })
+          .eq("status", s),
+      ),
     ),
   ]);
   const count = (s: QueueFilter) => counts[QUEUE_FILTERS.indexOf(s)]?.count ?? 0;
@@ -74,6 +97,7 @@ export default async function ModerationQueuePage({
   ]);
   const openReports = (openPostReports.count ?? 0) + (openCommentReports.count ?? 0);
   const rows = list.data ?? [];
+  const mine = activity?.[0];
 
   return (
     <>
@@ -90,6 +114,25 @@ export default async function ModerationQueuePage({
             </Notice>
           ) : null}
 
+          <dl className="stats stats--cards" aria-label="Your moderation summary">
+            <div>
+              <dt>{scoped ? "Pending in your departments" : "Pending reviews"}</dt>
+              <dd>{count("pending")}</dd>
+            </div>
+            <div>
+              <dt>Open reports</dt>
+              <dd>{openReports}</dd>
+            </div>
+            <div>
+              <dt>Your decisions, last 7 days</dt>
+              <dd>{mine?.decisions ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Returned, waiting for authors</dt>
+              <dd>{count("returned")}</dd>
+            </div>
+          </dl>
+
           <nav aria-label="Moderation sections" className="queue-tabs">
             <Link href="/moderation" className="queue-tab" aria-current="page">
               Experience queue
@@ -99,11 +142,27 @@ export default async function ModerationQueuePage({
             </Link>
           </nav>
 
+          {myCodes.length > 0 ? (
+            <nav aria-label="Departments" className="scope-switch">
+              <Link href={href(filter, false)} aria-current={scoped ? "page" : undefined}>
+                My departments ({myCodes.join(", ")})
+              </Link>
+              <Link href={href(filter, true)} aria-current={scoped ? undefined : "page"}>
+                All departments
+              </Link>
+            </nav>
+          ) : viewer.profile?.role === "moderator" ? (
+            <p className="muted">
+              No departments are assigned to you yet, so you see all of them. An admin assigns
+              departments.
+            </p>
+          ) : null}
+
           <nav aria-label="Filter by status" className="queue-tabs">
             {QUEUE_FILTERS.map((s) => (
               <Link
                 key={s}
-                href={s === "pending" ? "/moderation" : `/moderation?status=${s}`}
+                href={href(s)}
                 className="queue-tab"
                 aria-current={s === filter ? "page" : undefined}
               >

@@ -203,3 +203,18 @@ export function psqlAs(userId, sql) {
     ${sql}
     commit;`);
 }
+
+/**
+ * Forms built on ActionForm (and the comment form) clear themselves in an effect shortly AFTER the
+ * success message appears. Typing into the form before that happens gets wiped, and the next
+ * submit is then blocked by browser validation. Call this after a success, before refilling.
+ */
+export async function waitForFormReset(form, field) {
+  await form.locator(field).evaluate(
+    (el) =>
+      new Promise((resolve) => {
+        const tick = () => (el.value === "" ? resolve() : requestAnimationFrame(tick));
+        tick();
+      }),
+  );
+}

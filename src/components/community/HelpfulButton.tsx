@@ -25,8 +25,11 @@ export function HelpfulButton({ id, count, voted }: { id: string; count: number;
         startTransition(() => run(data));
       }}
     >
-      <p aria-live="polite" className="helpful-count">
-        {countText(state.count)}
+      <p aria-live="polite">
+        {/* Keyed so the count re-mounts and replays its small pop when it changes. */}
+        <span key={state.count} className="helpful-count">
+          {countText(state.count)}
+        </span>
       </p>
       <button
         type="submit"

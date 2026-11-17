@@ -19,3 +19,13 @@ export function safeNextPath(raw: unknown, fallback = "/account"): string {
     return fallback;
   }
 }
+
+/**
+ * Destination after sign-in. An explicit, safe `next` path wins (for example the protected page a
+ * visitor was trying to open); a missing or unsafe one falls back to `home`, the role's home page
+ * from `homeForRole` in permissions.ts.
+ */
+export function postSignInPath(rawNext: unknown, home: string): string {
+  if (typeof rawNext !== "string" || rawNext.trim() === "") return home;
+  return safeNextPath(rawNext, home);
+}

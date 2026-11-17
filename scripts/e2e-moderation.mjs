@@ -71,18 +71,31 @@ try {
   check("student: review page is 404", r2?.status() === 404);
   await s.page.goto(`${APP}/`);
   check(
-    "student: no Moderation link in header",
-    (await s.page.locator(".header-actions >> text=Moderation").count()) === 0,
+    "student: no Staff menu in header",
+    (await s.page.locator(".header-actions .staff-menu").count()) === 0,
   );
+  await s.page.goto(`${APP}/sign-in`);
+  check("student: signed-in /sign-in lands on /", s.page.url() === `${APP}/`, s.page.url());
   await s.ctx.close();
 
   // ---------- Queue ----------
   const m = await pageFor(mod);
   const mp = m.page;
   await mp.goto(`${APP}/`);
+  await mp.click(".header-actions .staff-menu__summary");
+  const modMenu = (await mp.textContent(".header-actions .staff-menu__list")) ?? "";
   check(
-    "moderator: header shows Moderation",
-    await mp.locator(".header-actions >> text=Moderation").isVisible(),
+    "moderator: Staff menu shows moderation links, no admin links",
+    modMenu.includes("Moderation queue") &&
+      modMenu.includes("Reports") &&
+      !modMenu.includes("Admin"),
+    modMenu,
+  );
+  await mp.goto(`${APP}/sign-in`);
+  check(
+    "moderator: signed-in /sign-in lands on /moderation",
+    mp.url() === `${APP}/moderation`,
+    mp.url(),
   );
   await mp.goto(`${APP}/moderation`, { waitUntil: "networkidle" });
   const queue = (await mp.textContent(".queue")) ?? "";

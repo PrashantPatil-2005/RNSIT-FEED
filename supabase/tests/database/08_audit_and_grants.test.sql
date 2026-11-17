@@ -112,6 +112,9 @@ begin
       'cancel_submission', 'set_helpful_vote', 'add_comment', 'delete_my_comment', 'report_comment',
       'moderate_comment', 'resolve_comment_report',
       'admin_invite_alumnus', 'admin_revoke_alumni_invite', 'admin_list_alumni_invites',
+      'moderator_step_down', 'admin_assign_moderator_department', 'admin_unassign_moderator_department',
+      'my_moderator_departments', 'admin_moderator_coverage', 'admin_user_role_history',
+      'my_moderation_activity', 'admin_moderator_activity',
       'is_admin', 'is_staff', 'uid'   -- uid is auth.uid(), outside these schemas; listed for clarity
     );
   perform test.assert(v_bad is null, 'authenticated can execute unexpected functions: ' || coalesce(v_bad, ''));

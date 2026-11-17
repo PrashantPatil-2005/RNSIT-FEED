@@ -3,41 +3,65 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
 import { Container } from "@/components/layout/Container";
+import { ActionForm, ReasonField } from "@/components/ui/ActionForm";
+import { Notice } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { requireViewer, type UserRole } from "@/lib/auth/session";
+import { roleLabels } from "@/lib/admin/labels";
+import { roleAbilities, staffLinksFor } from "@/lib/auth/permissions";
+import { requireViewer } from "@/lib/auth/session";
 import { getReferenceData } from "@/lib/data/queries";
+import { requestDeletionAction, stepDownAction } from "./actions";
 
 export const metadata: Metadata = { title: "Your account", robots: { index: false } };
-
-const roleLabels: Record<UserRole, string> = {
-  student: "Student",
-  alumni: "Alumni",
-  moderator: "Moderator",
-  admin: "Admin",
-};
 
 /** Shows the year and department part only; the serial is hidden unless the owner expands it. */
 function maskUsn(usn: string): string {
   return `${usn.slice(0, 7)}•••`;
 }
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const steppedDown = params.stepped_down === "1";
   const viewer = await requireViewer("/account");
   const profile = viewer.profile;
   if (!profile || !profile.onboarded) redirect("/onboarding");
 
-  const [{ data: usn }, ref] = await Promise.all([
+  const isModerator = profile.role === "moderator";
+  const [{ data: usn }, ref, { data: myDepts }] = await Promise.all([
     viewer.db.rpc("get_my_usn"),
     getReferenceData(viewer.db),
+    isModerator ? viewer.db.rpc("my_moderator_departments") : Promise.resolve({ data: null }),
   ]);
   const dept = ref.departments.find((d) => d.id === profile.departmentId);
   const batch = ref.batches.find((b) => b.id === profile.batchId);
+  const staffLinks = staffLinksFor(profile.role);
 
   return (
     <>
       <PageHeader eyebrow="Account" title="Your account" />
       <Container>
         <div className="section section--tight auth-narrow stack stack--lg">
+          {steppedDown ? (
+            <Notice title="You have stepped down">
+              <p>
+                You are no longer a moderator. Your role is now {roleLabels[profile.role]}. Thank
+                you for moderating.
+              </p>
+            </Notice>
+          ) : null}
+          {profile.deletionRequested ? (
+            <Notice title="Account deletion requested">
+              <p>
+                Your account is locked and will be deleted by the next daily clean-up, usually
+                within 24 hours. Your posts, comments, votes, USN and profile are removed, then your
+                login. You can sign out now.
+              </p>
+            </Notice>
+          ) : null}
           <div className="panel">
             <dl className="facts facts--account">
               <div>
@@ -79,6 +103,70 @@ export default async function AccountPage() {
             </dl>
           </div>
 
+          <section className="panel stack role-card" aria-labelledby="role-heading">
+            <h2 id="role-heading" className="h-small">
+              Your role:{" "}
+              <span className={`status status--role-${profile.role}`}>
+                {roleLabels[profile.role]}
+              </span>
+            </h2>
+            <ul className="checklist">
+              {roleAbilities[profile.role].map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+            {isModerator ? (
+              <p>
+                <strong>Your departments:</strong>{" "}
+                {myDepts && myDepts.length > 0
+                  ? myDepts.map((d) => `${d.code} · ${d.name}`).join(", ")
+                  : "none assigned yet (you see every department)"}
+                . Your queue opens on these; you can still review any department.
+              </p>
+            ) : null}
+            {staffLinks.length > 0 ? (
+              <p className="role-card__links">
+                {staffLinks.map((l, i) => (
+                  <span key={l.href}>
+                    {i > 0 ? " · " : null}
+                    <Link href={l.href}>{l.label}</Link>
+                  </span>
+                ))}
+              </p>
+            ) : null}
+          </section>
+
+          {isModerator ? (
+            <details className="panel admin-details step-down">
+              <summary>Step down as moderator</summary>
+              <p className="muted">
+                You go back to your previous role, your departments are cleared, and the change is
+                recorded. Only an admin can make you a moderator again.
+              </p>
+              <ActionForm
+                action={stepDownAction}
+                submitLabel="Step down"
+                label="Step down as moderator"
+                danger
+              >
+                <ReasonField
+                  id="step-down-reason"
+                  hint="Kept in the audit log, for example: exams this semester. No names or USNs."
+                />
+                <div className="check">
+                  <input
+                    id="step-down-confirm"
+                    name="confirm"
+                    type="checkbox"
+                    value="yes"
+                    required
+                  />
+                  <label htmlFor="step-down-confirm">I want to stop moderating</label>
+                </div>
+              </ActionForm>
+            </details>
+          ) : null}
+
           <ul className="checklist">
             <li>Only you can see your USN. Moderators and other students never can.</li>
             <li>
@@ -86,8 +174,8 @@ export default async function AccountPage() {
               An admin can correct a mistake.
             </li>
             <li>
-              Your role is assigned by admins and cannot be changed from your account. See the{" "}
-              <Link href="/privacy">privacy page</Link>.
+              Your role is assigned by admins. Moderators can step down here; any other change goes
+              through an admin. See the <Link href="/privacy">privacy page</Link>.
             </li>
           </ul>
 
@@ -95,6 +183,34 @@ export default async function AccountPage() {
             <Link href="/my/experiences">My experiences</Link> · drafts, submissions and published
             posts.
           </p>
+
+          {profile.deletionRequested ? null : (
+            <details className="panel admin-details delete-account">
+              <summary>Delete my account</summary>
+              <p className="muted">
+                This deletes your posts (published, pending and drafts), comments, votes, USN and
+                profile, then your login. It cannot be undone, and your account is locked as soon as
+                you confirm.
+              </p>
+              <ActionForm
+                action={requestDeletionAction}
+                submitLabel="Delete my account"
+                label="Delete my account"
+                danger
+              >
+                <div className="field">
+                  <label htmlFor="delete-confirm">Type DELETE to confirm</label>
+                  <input
+                    id="delete-confirm"
+                    name="confirm_text"
+                    type="text"
+                    autoComplete="off"
+                    required
+                  />
+                </div>
+              </ActionForm>
+            </details>
+          )}
 
           <form action={signOut}>
             <button type="submit" className="btn btn--secondary">

@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { Container } from "@/components/layout/Container";
 import { ExperienceCard } from "@/components/experience/ExperienceCard";
-import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { SampleNotice } from "@/components/ui/Sample";
 import { StateMessage } from "@/components/ui/StateMessage";
-import { site } from "@/config/site";
 import { parseFilters } from "@/lib/data/filters";
 import {
   getReferenceData,
@@ -44,25 +42,6 @@ export default async function HomePage() {
     <>
       <section className="hero" aria-labelledby="hero-title">
         <Container>
-<<<<<<< Updated upstream
-          <div className="hero__grid">
-            <div className="hero__inner">
-              <div className="cluster">
-                <Badge tone="accent">Early preview · reading is open</Badge>
-              </div>
-              <h1 id="hero-title">What RNSIT seniors learned, available to the next batch.</h1>
-              <p className="lead">
-                RNSIT FEED is a free, structured archive of placement experiences shared by RNSIT
-                students and alumni, organised by company, department, batch and opportunity type,
-                so every batch can prepare from what happened before.
-              </p>
-              <div className="hero__actions">
-                <ButtonLink href="/experiences">Browse experiences</ButtonLink>
-                <ButtonLink href="/companies" variant="secondary">
-                  Explore companies
-                </ButtonLink>
-              </div>
-=======
           <div className="hero__inner">
             <h1 id="hero-title">
               Placement experiences from RNSIT seniors, <em>by company.</em>
@@ -89,70 +68,16 @@ export default async function HomePage() {
               <ButtonLink href="/companies" variant="secondary">
                 Companies
               </ButtonLink>
->>>>>>> Stashed changes
             </div>
-            <aside className="hero__panel" aria-labelledby="archive-title">
-              <h2 id="archive-title" className="panel__title">
-                In the archive
-              </h2>
-              {home ? (
-                <dl className="hero__stats">
-                  <div>
-                    <dt>Experiences</dt>
-                    <dd>{home.totalPosts}</dd>
-                  </div>
-                  <div>
-                    <dt>Companies</dt>
-                    <dd>{home.coveredCompanies}</dd>
-                  </div>
-                </dl>
-              ) : (
-                <p className="muted">Not available right now.</p>
-              )}
-              <ul className="hero__status list-reset">
-                <li>
-                  <span className="dot dot--on" aria-hidden="true" /> Reading: open to everyone
-                </li>
-                <li>
-                  <span className="dot" aria-hidden="true" /> Sign-in and posting: opening later
-                </li>
-              </ul>
-              {site.sampleContent ? (
-                <p className="hero__sample">
-                  <strong>Preview with sample data.</strong> The experiences currently shown are
-                  synthetic test entries, not real student submissions.
-                </p>
-              ) : null}
-            </aside>
           </div>
-        </Container>
-      </section>
-
-      <section className="section section--surface" aria-labelledby="problem-title">
-        <Container>
-          <div className="section__head">
-            <p className="eyebrow">The problem</p>
-            <h2 id="problem-title">Placement knowledge keeps leaving with each batch.</h2>
-          </div>
-          <ul className="checklist">
-            <li>It is scattered across WhatsApp groups, personal chats and individual memory.</li>
-            <li>When a batch graduates, most of what it learned goes with it.</li>
-            <li>
-              Juniors fall back on generic internet advice that does not reflect how companies
-              recruit at RNSIT.
-            </li>
-          </ul>
         </Container>
       </section>
 
       <section className="section" aria-labelledby="latest-title">
         <Container>
           <div className="section__head section__head--row">
-            <div className="stack">
-              <p className="eyebrow">Latest</p>
-              <h2 id="latest-title">Recently published experiences</h2>
-            </div>
-            <Link href="/experiences">View all</Link>
+            <h2 id="latest-title">Recently published experiences</h2>
+            <Link href="/experiences">All experiences</Link>
           </div>
           <SampleNotice />
           {home === null ? (
@@ -179,7 +104,7 @@ export default async function HomePage() {
                 {home.companies.map((c) => (
                   <li key={c.id}>
                     <Link href={`/companies/${c.slug}`} className="tag tag--link">
-                      {c.name} <span className="muted">({c.postCount})</span>
+                      {c.name} <span className="muted">{c.postCount}</span>
                     </Link>
                   </li>
                 ))}
@@ -189,43 +114,43 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      <section className="section section--bordered" aria-labelledby="how-title">
+      <section className="section section--surface" aria-labelledby="about-title">
         <Container>
-          <div className="section__head">
-            <p className="eyebrow">How it works</p>
-            <h2 id="how-title">Open to read, careful to write.</h2>
-          </div>
-          <ol className="steps">
-            <li>
-              <h3>Read freely</h3>
-              <p>Anyone can browse published experiences and company pages without signing in.</p>
-            </li>
-            <li>
-              <h3>Contribute as a verified member</h3>
+          <div className="about">
+            <div className="stack">
+              <h2 id="about-title">Why this exists</h2>
               <p>
-                Only verified RNSIT students and alumni can post, comment, vote or report. Sign-in
-                opens soon.
+                Placement knowledge at RNSIT lives in WhatsApp groups, private chats and the memory
+                of whoever went through it. Each batch that graduates takes most of it along, and
+                the next one prepares from generic advice that does not match how companies recruit
+                here.
               </p>
-            </li>
-            <li>
-              <h3>Reviewed before it appears</h3>
-              <p>
-                Moderators approve posts first, and confidential or personal material is rejected.
+              <p className="muted">
+                RNSIT FEED is an independent student initiative. It is not an official RNSIT
+                platform and does not replace Training and Placement cell announcements.{" "}
+                <Link href="/disclaimer">Disclaimer</Link>
               </p>
-            </li>
-          </ol>
-        </Container>
-      </section>
-
-      <section className="section section--surface" aria-labelledby="independent-title">
-        <Container>
-          <div className="stack">
-            <h2 id="independent-title">An independent student initiative</h2>
-            <p>
-              RNSIT FEED is not an official RNSIT platform and is not affiliated with the institute.
-              It does not replace announcements from the Training and Placement cell.{" "}
-              <Link href="/disclaimer">Read the full disclaimer</Link>.
-            </p>
+            </div>
+            <dl className="about__rules">
+              <div>
+                <dt>Reading</dt>
+                <dd>Open to everyone. No account needed for posts, companies or search.</dd>
+              </div>
+              <div>
+                <dt>Posting</dt>
+                <dd>
+                  Verified RNSIT students and alumni only. The same applies to comments, votes and
+                  reports.
+                </dd>
+              </div>
+              <div>
+                <dt>Review</dt>
+                <dd>
+                  Every post is approved by a moderator first. Confidential company material and
+                  personal details are rejected. <Link href="/guidelines">Guidelines</Link>
+                </dd>
+              </div>
+            </dl>
           </div>
         </Container>
       </section>

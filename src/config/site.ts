@@ -14,6 +14,11 @@ export const site = {
    * submission. Never set this in production.
    */
   sampleContent: process.env.NEXT_PUBLIC_SAMPLE_CONTENT === "true",
+  /**
+   * College Google domain, confirmed by the owner (U1). Display text only: the database setting
+   * private.settings.allowed_email_domain is what actually decides who can sign up.
+   */
+  collegeDomain: "rnsit.ac.in",
 } as const;
 
 export interface NavItem {

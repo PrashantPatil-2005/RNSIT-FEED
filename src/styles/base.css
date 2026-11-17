@@ -19,7 +19,10 @@ body {
   font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: var(--leading-body);
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 main {
@@ -31,13 +34,10 @@ h2,
 h3 {
   margin: 0;
   line-height: var(--leading-tight);
-  letter-spacing: -0.02em;
-  font-weight: 700;
+  font-weight: 600;
   text-wrap: balance;
 }
 
-<<<<<<< Updated upstream
-=======
 /* Page and section titles are set in the serif; everything at h3 and below stays in the UI sans. */
 h1,
 h2 {
@@ -55,7 +55,6 @@ h6 {
   line-height: var(--leading-snug);
   color: var(--color-heading-minor);
 }
->>>>>>> Stashed changes
 h1 {
   font-size: var(--text-hero);
 }
@@ -64,7 +63,8 @@ h2 {
 }
 h3 {
   font-size: var(--text-lg);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
+  line-height: var(--leading-snug);
 }
 
 p {
@@ -81,16 +81,37 @@ ol {
 
 a {
   color: var(--color-accent);
-  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 0.22em;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    text-decoration-color var(--dur-fast) var(--ease-standard);
 }
 a:hover {
   color: var(--color-accent-hover);
+  text-decoration-color: currentColor;
 }
 
 :focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
-  border-radius: 2px;
+}
+
+/* Form controls: hover and focus feedback. The focus halo lives at the end of components.css
+   so it outranks the per-component input rules. */
+:where(input:not([type="checkbox"], [type="radio"]), select, textarea) {
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+:where(input:not([type="checkbox"], [type="radio"]), select, textarea):hover:not(:disabled) {
+  border-color: var(--color-fg-subtle);
+}
+::placeholder {
+  color: var(--color-fg-subtle);
+  opacity: 1;
 }
 
 button {
@@ -104,8 +125,18 @@ hr {
 }
 
 ::selection {
-  background: var(--color-accent);
-  color: var(--color-bg);
+  background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  color: var(--color-fg);
+}
+
+/* Numbers that change or sit in columns keep a fixed width. */
+.stats dd,
+.hero__stats dd,
+.queue-tab__count,
+.difficulty__num,
+.pagination__page,
+time {
+  font-variant-numeric: tabular-nums;
 }
 
 .visually-hidden {

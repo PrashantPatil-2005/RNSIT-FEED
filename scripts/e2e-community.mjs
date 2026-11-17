@@ -16,6 +16,7 @@ import {
   setRole,
   submitAs,
   waitForApp,
+  waitForFormReset,
 } from "./lib/local.mjs";
 
 const require = createRequire(import.meta.url);
@@ -139,6 +140,7 @@ try {
   await form.locator("textarea[name=body]").fill(memberComment);
   await form.locator("button[type=submit]").click();
   await form.locator(".form__ok").waitFor();
+  await waitForFormReset(form, "textarea[name=body]");
   const cid = commentId(memberComment);
   check(
     "comment posted and marked as mine",
@@ -231,6 +233,16 @@ try {
     psql(`select status from public.comments where id = '${replyId}'`) === "removed" &&
       !(await (await fetch(anonUrl)).text()).includes(authorReply),
   );
+  const ar = await pageFor(author);
+  await ar.page.goto(`${APP}/my/experiences`, { waitUntil: "networkidle" });
+  const mine = await main(ar.page);
+  check(
+    "the commenter is told their comment was removed (no reporter or reason shown)",
+    mine.includes("Comments removed by moderators") &&
+      mine.includes(authorReply) &&
+      !mine.includes(`Comment report detail ${tag}`),
+  );
+  await ar.ctx.close();
 
   const pr = sp.locator("li.my-item", { hasText: `Post report detail ${tag}` });
   await pr.locator("summary:has-text('Resolve')").click();

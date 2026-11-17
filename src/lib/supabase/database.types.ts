@@ -1983,6 +1983,10 @@ export type Database = {
         Args: { p_alias: string; p_company: string; p_reason: string };
         Returns: string;
       };
+      admin_assign_moderator_department: {
+        Args: { p_department: number; p_reason: string; p_user: string };
+        Returns: undefined;
+      };
       admin_correct_name: {
         Args: { p_name: string; p_reason: string; p_user: string };
         Returns: undefined;
@@ -2020,6 +2024,26 @@ export type Database = {
           verification_method: string;
         }[];
       };
+      admin_moderator_activity: {
+        Args: { p_days?: number };
+        Returns: {
+          decisions: number;
+          full_name: string;
+          last_decision_at: string;
+          role: Database["public"]["Enums"]["user_role"];
+          user_id: string;
+        }[];
+      };
+      admin_moderator_coverage: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          code: string;
+          department_id: number;
+          moderator_count: number;
+          moderators: Json;
+          name: string;
+        }[];
+      };
       admin_reveal_author: { Args: { p_experience: string; p_reason: string }; Returns: Json };
       admin_revoke_alumni_invite: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_set_user_role: {
@@ -2029,6 +2053,20 @@ export type Database = {
           p_user: string;
         };
         Returns: undefined;
+      };
+      admin_unassign_moderator_department: {
+        Args: { p_department: number; p_reason: string; p_user: string };
+        Returns: undefined;
+      };
+      admin_user_role_history: {
+        Args: { p_user: string };
+        Returns: {
+          changed_by_name: string;
+          created_at: string;
+          new_role: Database["public"]["Enums"]["user_role"];
+          old_role: Database["public"]["Enums"]["user_role"];
+          self_service: boolean;
+        }[];
       };
       admin_usn_case_approve: {
         Args: {
@@ -2078,6 +2116,25 @@ export type Database = {
         Returns: undefined;
       };
       moderation_experience_detail: { Args: { p_id: string }; Returns: Json };
+      moderator_step_down: {
+        Args: { p_reason: string };
+        Returns: Database["public"]["Enums"]["user_role"];
+      };
+      my_moderation_activity: {
+        Args: { p_days?: number };
+        Returns: {
+          decisions: number;
+          last_decision_at: string;
+        }[];
+      };
+      my_moderator_departments: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          code: string;
+          department_id: number;
+          name: string;
+        }[];
+      };
       object_to_usn_release: { Args: { p_case: string }; Returns: undefined };
       purge_deletion_ledger: { Args: { p_days?: number }; Returns: number };
       purge_expired_alumni_invites: { Args: Record<PropertyKey, never>; Returns: number };
@@ -2171,7 +2228,10 @@ export type Database = {
         | "deny_usn_case"
         | "execute_usn_release"
         | "invite_alumnus"
-        | "revoke_alumni_invite";
+        | "revoke_alumni_invite"
+        | "assign_moderator_department"
+        | "unassign_moderator_department"
+        | "moderator_step_down";
       campus_type: "on_campus" | "off_campus";
       comment_status: "visible" | "removed";
       exp_status:
@@ -2335,6 +2395,9 @@ export const Constants = {
         "execute_usn_release",
         "invite_alumnus",
         "revoke_alumni_invite",
+        "assign_moderator_department",
+        "unassign_moderator_department",
+        "moderator_step_down",
       ],
       campus_type: ["on_campus", "off_campus"],
       comment_status: ["visible", "removed"],

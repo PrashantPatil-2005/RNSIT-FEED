@@ -67,6 +67,13 @@ try {
     `"not configured" note ${googleOn ? "absent" : "shown"} accordingly`,
     mainText.includes("not configured in this environment") === !googleOn,
   );
+  const banner = (await page.textContent(".status-banner")) ?? "";
+  check(
+    `site banner says sign-in is ${googleOn ? "open" : "not available"}`,
+    googleOn
+      ? banner.includes("Sign in with your @rnsit.ac.in Google account")
+      : banner.includes("Sign-in and posting are not available yet"),
+  );
 
   // ---------- Open-redirect protection (sign-in next parameter) ----------
   for (const evil of [
@@ -78,7 +85,7 @@ try {
   ]) {
     await page.goto(`${APP}/sign-in?next=${encodeURIComponent(evil)}`);
     const v = await page.inputValue('input[name="next"]');
-    check(`unsafe next rejected: ${evil}`, v === "/account", v);
+    check(`unsafe next rejected: ${evil}`, v === "", v);
   }
   await page.goto(`${APP}/sign-in?next=${encodeURIComponent("/experiences?type=internship")}`);
   check(
@@ -91,7 +98,7 @@ try {
     [
       "?error=access_denied&error_description=Sign-up%20is%20not%20allowed%20for%20this%20email%20address.",
       "not_eligible",
-      "This account cannot join yet",
+      "This account cannot join",
     ],
     [
       "?error=access_denied&error_description=User%20cancelled",

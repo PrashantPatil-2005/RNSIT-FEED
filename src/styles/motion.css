@@ -1,0 +1,96 @@
+/*
+ * Motion. Rules (see docs/DESIGN.md):
+ *   - Animate opacity and transform only (cheap, no layout); colours may transition.
+ *   - Fast for feedback (--dur-fast), base for state changes. No decorative entrances.
+ *   - Never delay input; every effect degrades to an instant change.
+ *   - prefers-reduced-motion turns all of it off (bottom of this file and base.css).
+ */
+
+/* ---------- Entrances ---------- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+@keyframes count-pop {
+  40% {
+    transform: scale(1.06);
+  }
+}
+
+/* No entrance animation on page content: lists and headers render in place.
+   Motion is kept for feedback (state changes, disclosures) only. */
+
+.notice,
+.form__error,
+.form__ok {
+  animation: fade-in var(--dur-base) var(--ease-standard) both;
+}
+
+/* Vote count nudges when it changes (HelpfulButton keys the span by count, so it re-mounts). */
+span.helpful-count {
+  display: inline-block;
+  animation: count-pop var(--dur-base) var(--ease-emphasized);
+}
+
+/* ---------- Disclosures ---------- */
+.mobile-nav[open] > .mobile-nav__panel {
+  animation: pop-in var(--dur-base) var(--ease-standard);
+  transform-origin: top right;
+}
+.confirm[open] > form,
+.reveal[open] > :not(summary),
+.admin-details[open] > :not(summary),
+.comment__action[open] > :not(summary) {
+  animation: fade-up var(--dur-base) var(--ease-standard);
+}
+
+/* ---------- Route changes (React <ViewTransition default="page"> in the root layout) ---------- */
+::view-transition-old(.page) {
+  animation: var(--dur-fast) var(--ease-exit) both vt-fade-out;
+}
+::view-transition-new(.page) {
+  animation: var(--dur-base) var(--ease-standard) both vt-fade-in;
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- Theme switch: the toggle animates a circular clip on the new snapshot ---------- */
+.theme-transition::view-transition-old(root),
+.theme-transition::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

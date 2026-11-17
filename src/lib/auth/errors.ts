@@ -5,8 +5,8 @@
  */
 export const authErrors = {
   not_eligible: {
-    title: "This account cannot join yet",
-    body: "Sign-up is limited to verified RNSIT Google accounts, and it is not open yet. Reading stays open to everyone.",
+    title: "This account cannot join",
+    body: "Only verified RNSIT college Google accounts can join, and alumni an admin has invited. Nothing was stored. Reading stays open to everyone.",
   },
   oauth_cancelled: {
     title: "Sign-in was cancelled",

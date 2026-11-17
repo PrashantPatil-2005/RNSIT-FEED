@@ -42,7 +42,7 @@ export default async function MyExperiencesPage({
   const viewer = await requireViewer("/my/experiences");
   if (!viewer.profile?.onboarded) redirect("/onboarding");
   const sp = await searchParams;
-  const [{ data, error }, ref] = await Promise.all([
+  const [{ data, error }, ref, removedComments] = await Promise.all([
     viewer.db
       .from("my_experiences")
       .select(
@@ -50,6 +50,13 @@ export default async function MyExperiencesPage({
       )
       .order("updated_at", { ascending: false }),
     getReferenceData(viewer.db),
+    // The member's own comments that a moderator removed (removal reasons stay staff-only).
+    viewer.db
+      .from("my_comments")
+      .select("id, experience_id, body, removed_at")
+      .eq("status", "removed")
+      .order("removed_at", { ascending: false })
+      .limit(20),
   ]);
   const company = (id: string | null) =>
     ref.companies.find((c) => c.id === id)?.name ?? "Company not chosen";
@@ -154,6 +161,28 @@ export default async function MyExperiencesPage({
               })}
             </ul>
           )}
+
+          {removedComments.data?.length ? (
+            <section aria-labelledby="removed-comments" className="stack">
+              <h2 id="removed-comments">Comments removed by moderators</h2>
+              <p className="muted">
+                These comments are no longer shown. See the{" "}
+                <Link href="/guidelines">content guidelines</Link> for what is allowed.
+              </p>
+              <ul className="my-list list-reset">
+                {removedComments.data.map((c) => (
+                  <li key={c.id} className="my-item">
+                    <div>
+                      <p className="my-item__note prewrap">“{c.body}”</p>
+                      <p className="my-item__meta">
+                        <Link href={`/experiences/${c.experience_id}`}>On this experience</Link>
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       </Container>
     </>
