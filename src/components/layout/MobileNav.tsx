@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { NavLinks } from "@/components/layout/NavLinks";
 import type { NavItem } from "@/config/site";
 
@@ -10,7 +9,7 @@ import type { NavItem } from "@/config/site";
  * Small-screen menu built on a native <details> element, so it opens and closes without
  * JavaScript. The effects below only add: close after navigating, and close on Escape.
  */
-export function MobileNav({ items }: { items: readonly NavItem[] }) {
+export function MobileNav({ items, account }: { items: readonly NavItem[]; account: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null);
   const pathname = usePathname();
 
@@ -36,9 +35,7 @@ export function MobileNav({ items }: { items: readonly NavItem[] }) {
       <div className="mobile-nav__panel">
         <NavLinks items={items} label="Mobile" />
         <hr />
-        <Link className="nav-link" href="/sign-in">
-          Sign in (not available yet)
-        </Link>
+        {account}
       </div>
     </details>
   );

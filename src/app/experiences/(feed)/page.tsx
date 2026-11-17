@@ -4,6 +4,7 @@ import { ExperienceResults } from "@/components/experience/ExperienceResults";
 import { FilterBar } from "@/components/experience/FilterBar";
 import { NotConfigured } from "@/components/ui/NotConfigured";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SampleNotice } from "@/components/ui/Sample";
 import { hasActiveFilters, parseFilters, type RawSearchParams } from "@/lib/data/filters";
 import { getReferenceData, searchExperiences } from "@/lib/data/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -33,9 +34,10 @@ export default async function ExperiencesPage({
         description="Round-by-round accounts from seniors, reviewed by moderators before they appear."
       />
       <Container>
-        <div className="section section--tight stack--lg">
+        <div className="section section--tight stack stack--lg">
+          <SampleNotice />
           <FilterBar filters={filters} reference={reference} action="/experiences" />
-          <p className="muted" aria-live="polite">
+          <p className="muted results-summary" aria-live="polite">
             {page.items.length === 0
               ? ""
               : hasActiveFilters(filters)

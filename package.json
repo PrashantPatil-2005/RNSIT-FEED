@@ -19,7 +19,8 @@
     "test:db": "node supabase/tests/run-supabase.mjs",
     "test:api": "node supabase/tests/api/run-api.mjs",
     "test:smoke": "node scripts/smoke-public.mjs",
-    "db:types": "supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts && prettier --write src/lib/supabase/database.types.ts"
+    "db:types": "supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts && prettier --write src/lib/supabase/database.types.ts",
+    "test:e2e:auth": "node scripts/e2e-auth.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

@@ -3,7 +3,9 @@ import { Container } from "@/components/layout/Container";
 import { ExperienceCard } from "@/components/experience/ExperienceCard";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
+import { SampleNotice } from "@/components/ui/Sample";
 import { StateMessage } from "@/components/ui/StateMessage";
+import { site } from "@/config/site";
 import { parseFilters } from "@/lib/data/filters";
 import {
   getReferenceData,
@@ -17,6 +19,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 async function loadHome(): Promise<{
   latest: ExperienceSummary[];
   companies: CompanyStats[];
+  totalPosts: number;
+  coveredCompanies: number;
 } | null> {
   const db = await createSupabaseServerClient();
   if (!db) return null;
@@ -25,7 +29,13 @@ async function loadHome(): Promise<{
     searchExperiences(db, parseFilters({}), reference, 6),
     listCompanies(db),
   ]);
-  return { latest: page.items, companies: companies.filter((c) => c.postCount > 0).slice(0, 8) };
+  const covered = companies.filter((c) => c.postCount > 0);
+  return {
+    latest: page.items,
+    companies: covered.slice(0, 8),
+    totalPosts: covered.reduce((sum, c) => sum + c.postCount, 0),
+    coveredCompanies: covered.length,
+  };
 }
 
 export default async function HomePage() {
@@ -34,22 +44,57 @@ export default async function HomePage() {
     <>
       <section className="hero" aria-labelledby="hero-title">
         <Container>
-          <div className="hero__inner">
-            <div className="cluster">
-              <Badge tone="accent">Early preview · reading is open</Badge>
+          <div className="hero__grid">
+            <div className="hero__inner">
+              <div className="cluster">
+                <Badge tone="accent">Early preview · reading is open</Badge>
+              </div>
+              <h1 id="hero-title">What RNSIT seniors learned, available to the next batch.</h1>
+              <p className="lead">
+                RNSIT FEED is a free, structured archive of placement experiences shared by RNSIT
+                students and alumni, organised by company, department, batch and opportunity type,
+                so every batch can prepare from what happened before.
+              </p>
+              <div className="hero__actions">
+                <ButtonLink href="/experiences">Browse experiences</ButtonLink>
+                <ButtonLink href="/companies" variant="secondary">
+                  Explore companies
+                </ButtonLink>
+              </div>
             </div>
-            <h1 id="hero-title">What RNSIT seniors learned, available to the next batch.</h1>
-            <p className="lead">
-              RNSIT FEED is a free, structured archive of real placement experiences, organised by
-              company, department, batch and opportunity type, so every batch can prepare from what
-              actually happened before.
-            </p>
-            <div className="hero__actions">
-              <ButtonLink href="/experiences">Browse experiences</ButtonLink>
-              <ButtonLink href="/companies" variant="secondary">
-                Explore companies
-              </ButtonLink>
-            </div>
+            <aside className="hero__panel" aria-labelledby="archive-title">
+              <h2 id="archive-title" className="panel__title">
+                In the archive
+              </h2>
+              {home ? (
+                <dl className="hero__stats">
+                  <div>
+                    <dt>Experiences</dt>
+                    <dd>{home.totalPosts}</dd>
+                  </div>
+                  <div>
+                    <dt>Companies</dt>
+                    <dd>{home.coveredCompanies}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="muted">Not available right now.</p>
+              )}
+              <ul className="hero__status list-reset">
+                <li>
+                  <span className="dot dot--on" aria-hidden="true" /> Reading: open to everyone
+                </li>
+                <li>
+                  <span className="dot" aria-hidden="true" /> Sign-in and posting: opening later
+                </li>
+              </ul>
+              {site.sampleContent ? (
+                <p className="hero__sample">
+                  <strong>Preview with sample data.</strong> The experiences currently shown are
+                  synthetic test entries, not real student submissions.
+                </p>
+              ) : null}
+            </aside>
           </div>
         </Container>
       </section>
@@ -80,6 +125,7 @@ export default async function HomePage() {
             </div>
             <Link href="/experiences">View all</Link>
           </div>
+          <SampleNotice />
           {home === null ? (
             <StateMessage kind="error" title="Content is not available right now">
               <p>The site cannot reach its database. Please try again later.</p>
@@ -98,7 +144,7 @@ export default async function HomePage() {
             </ul>
           )}
           {home && home.companies.length ? (
-            <div className="stack" style={{ marginTop: "var(--space-6)" }}>
+            <div className="stack home-companies">
               <h3 className="h-small">Companies with experiences</h3>
               <ul className="cluster list-reset">
                 {home.companies.map((c) => (
@@ -117,7 +163,7 @@ export default async function HomePage() {
       <section className="section section--bordered" aria-labelledby="how-title">
         <Container>
           <div className="section__head">
-            <p className="eyebrow">How it is intended to work</p>
+            <p className="eyebrow">How it works</p>
             <h2 id="how-title">Open to read, careful to write.</h2>
           </div>
           <ol className="steps">

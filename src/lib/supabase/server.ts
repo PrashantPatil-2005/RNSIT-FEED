@@ -2,6 +2,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { authCookieOptions } from "./cookies";
 import type { Database } from "./database.types";
 import { getSupabasePublicEnv } from "./env";
 
@@ -19,14 +20,14 @@ export async function createSupabaseServerClient(): Promise<DbClient | null> {
   if (!env) return null;
   const cookieStore = await cookies();
   return createServerClient<Database>(env.url, env.anonKey, {
+    cookieOptions: authCookieOptions(),
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (toSet) => {
         try {
           for (const { name, value, options } of toSet) cookieStore.set(name, value, options);
         } catch {
-          // Called from a Server Component, where cookies are read-only. Session refresh happens
-          // in the proxy/middleware once authentication is enabled.
+          // Server Components cannot write cookies; the proxy refreshes the session instead.
         }
       },
     },

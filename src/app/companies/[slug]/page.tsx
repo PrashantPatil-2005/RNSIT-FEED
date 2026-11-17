@@ -6,6 +6,8 @@ import { Container } from "@/components/layout/Container";
 import { ExperienceResults } from "@/components/experience/ExperienceResults";
 import { FilterBar } from "@/components/experience/FilterBar";
 import { NotConfigured } from "@/components/ui/NotConfigured";
+import { SampleBadge, SampleNotice } from "@/components/ui/Sample";
+import { site } from "@/config/site";
 import { parseFilters, type RawSearchParams } from "@/lib/data/filters";
 import { resultLabels, roundLabels, type ResultType, type RoundType } from "@/lib/data/labels";
 import { getCompany, getReferenceData, searchExperiences } from "@/lib/data/queries";
@@ -57,6 +59,11 @@ export default async function CompanyPage({ params, searchParams }: Props) {
               <Link href="/companies">Companies</Link>
             </nav>
             <h1>{company.name}</h1>
+            {site.sampleContent ? (
+              <div className="cluster cluster--tight">
+                <SampleBadge />
+              </div>
+            ) : null}
             <dl className="stats">
               <div>
                 <dt>Experiences</dt>
@@ -92,7 +99,11 @@ export default async function CompanyPage({ params, searchParams }: Props) {
         </Container>
       </header>
       <Container>
-        <div className="section section--tight stack--lg">
+        <div className="section section--tight stack stack--lg">
+          <SampleNotice>
+            This company page and its statistics are built from synthetic sample data created for
+            testing. They do not describe this company’s real recruitment process.
+          </SampleNotice>
           <FilterBar
             filters={filters}
             reference={reference}

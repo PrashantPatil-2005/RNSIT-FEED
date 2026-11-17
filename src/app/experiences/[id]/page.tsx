@@ -7,6 +7,7 @@ import { Difficulty } from "@/components/experience/Difficulty";
 import { ResultBadge } from "@/components/experience/ResultBadge";
 import { Badge } from "@/components/ui/Badge";
 import { NotConfigured } from "@/components/ui/NotConfigured";
+import { SampleBadge, SampleNotice } from "@/components/ui/Sample";
 import { isUuid } from "@/lib/data/filters";
 import {
   campusLabels,
@@ -53,6 +54,10 @@ export default async function ExperienceDetailPage({ params }: Props) {
     exp.eligibleDepartments.length ? `Branches: ${exp.eligibleDepartments.join(", ")}` : null,
   ].filter((x): x is string => x !== null);
 
+  const rated = exp.rounds.map((x) => x.difficulty).filter((d): d is number => d !== null);
+  const avgDifficulty = rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : null;
+  const totalMinutes = exp.rounds.reduce((sum, x) => sum + (x.durationMin ?? 0), 0);
+
   return (
     <article>
       <header className="page-header">
@@ -68,11 +73,12 @@ export default async function ExperienceDetailPage({ params }: Props) {
               <Link href={`/companies/${exp.companySlug}`}>{exp.companyName}</Link> ·{" "}
               {exp.departmentCode} · Batch {exp.batchYear} · Recruited {exp.recruitmentYear}
             </p>
-            <div className="cluster">
+            <div className="cluster cluster--tight">
               <ResultBadge result={exp.result} />
               <span className="visually-hidden">Result: {resultLabels[exp.result]}.</span>
               <Badge>{opportunityLabels[exp.opportunityType]}</Badge>
               <Badge>{campusLabels[exp.campusType]}</Badge>
+              <SampleBadge />
             </div>
             <p className="byline">
               Shared by <strong>{exp.authorName ?? "an anonymous member"}</strong>
@@ -82,7 +88,6 @@ export default async function ExperienceDetailPage({ params }: Props) {
                   · Published <time dateTime={exp.publishedOn}>{formatDate(exp.publishedOn)}</time>
                 </>
               ) : null}
-              {exp.helpfulCount > 0 ? <> · {exp.helpfulCount} found this helpful</> : null}
             </p>
           </div>
         </Container>
@@ -90,48 +95,55 @@ export default async function ExperienceDetailPage({ params }: Props) {
 
       <Container>
         <div className="detail">
-          <div className="detail__main stack--lg">
+          <div className="detail__main stack stack--lg">
+            <SampleNotice>
+              This is a synthetic sample experience created for testing the site. The company,
+              rounds and questions are not real.
+            </SampleNotice>
+
             <section aria-labelledby="rounds-title" className="stack">
-              <h2 id="rounds-title">Rounds ({exp.rounds.length})</h2>
+              <h2 id="rounds-title">Interview rounds ({exp.rounds.length})</h2>
               <ol className="rounds list-reset">
                 {exp.rounds.map((round) => (
                   <li key={round.id} className="round">
                     <div className="round__head">
                       <h3>
-                        <span className="round__num">Round {round.position}</span>{" "}
+                        <span className="round__num">Round {round.position}</span>
                         {roundLabels[round.roundType]}
                       </h3>
                       <Difficulty value={round.difficulty} />
                     </div>
-                    <dl className="round__facts">
-                      {round.durationMin !== null ? (
-                        <div>
-                          <dt>Duration</dt>
-                          <dd>{round.durationMin} min</dd>
-                        </div>
-                      ) : null}
-                      {round.platform ? (
-                        <div>
-                          <dt>Platform</dt>
-                          <dd>{round.platform}</dd>
-                        </div>
-                      ) : null}
-                      {round.topics.length ? (
-                        <div>
-                          <dt>Topics</dt>
-                          <dd className="cluster cluster--tight">
-                            {round.topics.map((t) => (
-                              <span key={t} className="tag">
-                                {t.toUpperCase()}
-                              </span>
-                            ))}
-                          </dd>
-                        </div>
-                      ) : null}
-                    </dl>
+                    {round.durationMin !== null || round.platform || round.topics.length ? (
+                      <dl className="round__facts">
+                        {round.durationMin !== null ? (
+                          <div>
+                            <dt>Duration</dt>
+                            <dd>{round.durationMin} min</dd>
+                          </div>
+                        ) : null}
+                        {round.platform ? (
+                          <div>
+                            <dt>Platform</dt>
+                            <dd>{round.platform}</dd>
+                          </div>
+                        ) : null}
+                        {round.topics.length ? (
+                          <div>
+                            <dt>Topics</dt>
+                            <dd className="cluster cluster--tight">
+                              {round.topics.map((t) => (
+                                <span key={t} className="tag">
+                                  {t.toUpperCase()}
+                                </span>
+                              ))}
+                            </dd>
+                          </div>
+                        ) : null}
+                      </dl>
+                    ) : null}
                     {round.notes ? <p className="round__notes">{round.notes}</p> : null}
                     {round.questions.length ? (
-                      <div className="stack">
+                      <div className="round__questions">
                         <h4 className="round__subhead">Questions asked</h4>
                         <ol className="questions">
                           {round.questions.map((q) => (
@@ -148,7 +160,7 @@ export default async function ExperienceDetailPage({ params }: Props) {
             {exp.prepTips ? (
               <section aria-labelledby="tips-title" className="stack">
                 <h2 id="tips-title">Preparation tips</h2>
-                <p className="prewrap">{exp.prepTips}</p>
+                <p className="prewrap measure">{exp.prepTips}</p>
               </section>
             ) : null}
 
@@ -172,14 +184,60 @@ export default async function ExperienceDetailPage({ params }: Props) {
               ) : (
                 <p className="muted">No comments yet.</p>
               )}
-              <p className="muted">
-                Commenting, helpful votes and reporting open once verified sign-in is available.
+              <p className="signin-note">
+                Adding a comment needs a verified RNSIT sign-in, which is not open yet.
               </p>
             </section>
           </div>
 
-          <aside className="detail__aside stack" aria-label="Summary">
-            <div className="panel stack">
+          <aside className="detail__aside" aria-label="Summary">
+            <div className="panel">
+              <h2 className="panel__title">At a glance</h2>
+              <dl className="facts">
+                <div>
+                  <dt>Result</dt>
+                  <dd>{resultLabels[exp.result]}</dd>
+                </div>
+                <div>
+                  <dt>Rounds</dt>
+                  <dd>{exp.rounds.length}</dd>
+                </div>
+                <div>
+                  <dt>Average difficulty</dt>
+                  <dd>
+                    {avgDifficulty !== null ? `${avgDifficulty.toFixed(1)} / 5` : "Not rated"}
+                  </dd>
+                </div>
+                {totalMinutes > 0 ? (
+                  <div>
+                    <dt>Total interview time</dt>
+                    <dd>{totalMinutes} min</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+
+            <div className="panel">
+              <h2 className="panel__title">Helpful?</h2>
+              <p>
+                {exp.helpfulCount === 0
+                  ? "No helpful votes yet."
+                  : `${exp.helpfulCount} member${exp.helpfulCount === 1 ? "" : "s"} found this helpful.`}
+              </p>
+              <button
+                type="button"
+                className="btn btn--secondary btn--small btn--block"
+                aria-disabled="true"
+                aria-describedby="helpful-note"
+              >
+                Mark as helpful
+              </button>
+              <p id="helpful-note" className="field__hint">
+                Voting needs a verified RNSIT sign-in, which is not open yet.
+              </p>
+            </div>
+
+            <div className="panel">
               <h2 className="panel__title">Eligibility</h2>
               {eligibility.length ? (
                 <ul className="list-reset stack--sm">
@@ -191,13 +249,19 @@ export default async function ExperienceDetailPage({ params }: Props) {
                 <p className="muted">Not shared.</p>
               )}
             </div>
+
             {exp.resources.length ? (
-              <div className="panel stack">
+              <div className="panel">
                 <h2 className="panel__title">Resources</h2>
                 <ul className="list-reset stack--sm">
                   {exp.resources.map((res) => (
                     <li key={res.url}>
-                      <a href={res.url} rel="nofollow noopener noreferrer ugc" target="_blank">
+                      <a
+                        className="resource-link"
+                        href={res.url}
+                        rel="nofollow noopener noreferrer ugc"
+                        target="_blank"
+                      >
                         {res.label ?? new URL(res.url).hostname}
                         <span className="visually-hidden"> (opens in a new tab)</span>
                       </a>
@@ -209,9 +273,10 @@ export default async function ExperienceDetailPage({ params }: Props) {
                 </p>
               </div>
             ) : null}
+
             <p className="field__hint">
-              Questions are written in the author’s own words. No question papers or confidential
-              material are allowed (<Link href="/guidelines">guidelines</Link>).
+              Questions are written in the author’s own words. Question papers and confidential
+              material are not allowed (<Link href="/guidelines">guidelines</Link>).
             </p>
           </aside>
         </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthControls } from "@/components/layout/AuthControls";
 import { Container } from "@/components/layout/Container";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NavLinks } from "@/components/layout/NavLinks";
@@ -20,12 +21,10 @@ export function SiteHeader() {
         </div>
 
         <div className="header-actions">
-          <Link className="btn btn--secondary btn--small" href="/sign-in">
-            Sign in (soon)
-          </Link>
+          <AuthControls />
         </div>
 
-        <MobileNav items={primaryNav} />
+        <MobileNav items={primaryNav} account={<AuthControls variant="menu" />} />
       </Container>
     </header>
   );

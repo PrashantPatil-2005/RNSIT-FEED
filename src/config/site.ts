@@ -7,7 +7,13 @@
 export const site = {
   name: "RNSIT FEED",
   description:
-    "A free, structured archive of placement experiences shared by RNSIT students and alumni. Planning stage: not live yet.",
+    "A free, structured archive of placement experiences shared by RNSIT students and alumni.",
+  /**
+   * True only where the database holds synthetic sample content (local development and previews).
+   * Every page then labels its content as sample data, so nothing is mistaken for a real student
+   * submission. Never set this in production.
+   */
+  sampleContent: process.env.NEXT_PUBLIC_SAMPLE_CONTENT === "true",
 } as const;
 
 export interface NavItem {

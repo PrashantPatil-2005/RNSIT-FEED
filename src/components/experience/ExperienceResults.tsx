@@ -43,7 +43,10 @@ export function ExperienceResults({
     : null;
   return (
     <>
-      <ul className="exp-grid list-reset" aria-label="Experiences">
+      <h2 id="results-title" className="visually-hidden">
+        Results
+      </h2>
+      <ul className="exp-grid list-reset" aria-labelledby="results-title">
         {page.items.map((exp) => (
           <li key={exp.id}>
             <ExperienceCard exp={exp} showCompany={showCompany} />
