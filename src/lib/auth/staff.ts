@@ -15,6 +15,15 @@ export async function requireStaff(nextPath: string): Promise<Viewer> {
   return viewer;
 }
 
+/** Gate for admin pages; same rules as requireStaff. The database re-checks every admin call. */
+export async function requireAdmin(nextPath: string): Promise<Viewer> {
+  const viewer = await requireViewer(nextPath);
+  const p = viewer.profile;
+  if (p && !p.onboarded) redirect("/onboarding");
+  if (!p || p.deletionRequested || p.role !== "admin") notFound();
+  return viewer;
+}
+
 export function isStaffRole(role: string | undefined): boolean {
   return role === "moderator" || role === "admin";
 }

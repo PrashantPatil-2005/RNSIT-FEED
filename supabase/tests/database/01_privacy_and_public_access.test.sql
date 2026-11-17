@@ -15,7 +15,8 @@ select test.expect_error($$ select * from public.my_experiences $$, 'permission 
 select test.expect_error($$ select * from public.moderation_experiences $$, 'permission denied');
 select test.expect_error($$ insert into public.companies (name, slug) values ('x', 'x') $$, 'permission denied');
 select test.assert((select count(*) from public.companies) = 2, 'visitor can read the company list');
-select test.assert((select count(*) from public.departments) = 3, 'visitor can read departments');
+select test.assert((select count(*) from public.departments) = 36, 'visitor can read all 36 VTU branches (migration 017)');
+select test.assert((select count(*) from public.batches) = 36, 'visitor can read graduation years 2000-2035');
 select test.reset();
 
 -- A signed-in student

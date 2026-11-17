@@ -24,6 +24,11 @@ export async function AuthControls({ variant = "bar" }: { variant?: "bar" | "men
           Moderation
         </Link>
       ) : null}
+      {viewer.profile?.role === "admin" && !needsSetup ? (
+        <Link className={variant === "bar" ? "btn-link" : "nav-link"} href="/admin">
+          Admin
+        </Link>
+      ) : null}
       <Link className={linkClass} href={needsSetup ? "/onboarding" : "/account"}>
         {needsSetup ? "Finish setup" : firstName}
         <span className="visually-hidden">{needsSetup ? "" : ", your account"}</span>

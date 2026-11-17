@@ -4,7 +4,7 @@ import { authCookieOptions } from "@/lib/supabase/cookies";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 /** Pages that need a signed-in user. Everything else stays public (reading is open). */
-const PROTECTED_PREFIXES = ["/account", "/onboarding", "/my", "/moderation"];
+const PROTECTED_PREFIXES = ["/account", "/onboarding", "/my", "/moderation", "/admin"];
 /** Draft editing (/share/<id>) is protected; /share itself shows visitors a sign-in prompt. */
 const isProtected = (path: string) =>
   path.startsWith("/share/") ||

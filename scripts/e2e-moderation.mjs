@@ -97,7 +97,10 @@ try {
   );
   check(
     "pending tab is current with a count",
-    (await mp.getAttribute('.queue-tab[aria-current="page"]', "href")) === "/moderation",
+    (await mp.getAttribute(
+      'nav[aria-label="Filter by status"] .queue-tab[aria-current="page"]',
+      "href",
+    )) === "/moderation",
   );
 
   // ---------- Anonymous review page never shows the author ----------
@@ -191,7 +194,10 @@ try {
   await mp.goto(`${APP}/moderation?status=bogus`, { waitUntil: "networkidle" });
   check(
     "unknown filter falls back to pending",
-    (await mp.getAttribute('.queue-tab[aria-current="page"]', "href")) === "/moderation",
+    (await mp.getAttribute(
+      'nav[aria-label="Filter by status"] .queue-tab[aria-current="page"]',
+      "href",
+    )) === "/moderation",
   );
 
   // ---------- History ----------

@@ -146,6 +146,7 @@ export interface ExperienceDetail extends ExperienceSummary {
     body: string;
     authorName: string | null;
     byPostAuthor: boolean;
+    isMine: boolean;
     postedOn: string;
   }[];
 }
@@ -173,7 +174,7 @@ export async function getExperience(db: DbClient, id: string): Promise<Experienc
     db.from("public_engagement").select("helpful_count").eq("experience_id", id).maybeSingle(),
     db
       .from("public_comments")
-      .select("id, body, author_name, by_post_author, posted_on, seq")
+      .select("id, body, author_name, by_post_author, is_mine, posted_on, seq")
       .eq("experience_id", id)
       .order("seq"),
   ]);
@@ -228,6 +229,7 @@ export async function getExperience(db: DbClient, id: string): Promise<Experienc
       body: c.body,
       authorName: c.author_name,
       byPostAuthor: c.by_post_author ?? false,
+      isMine: c.is_mine ?? false,
       postedOn: c.posted_on ?? "",
     })),
   };

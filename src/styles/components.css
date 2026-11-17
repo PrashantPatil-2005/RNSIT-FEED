@@ -1717,3 +1717,123 @@ a.btn-link {
   display: inline-flex;
   align-items: center;
 }
+
+/* ---------- Admin ---------- */
+.admin-cards {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+.admin-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+.admin-search .field {
+  flex: 1 1 12rem;
+}
+.admin-search .field input,
+.admin-search .field select,
+.action-form .field input,
+.action-form .field select,
+.action-form .field textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  color: var(--color-fg);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+.admin-user__actions {
+  display: grid;
+  gap: var(--space-2);
+  min-width: min(100%, 20rem);
+}
+.admin-details > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+.admin-details[open] > summary {
+  margin-bottom: var(--space-2);
+}
+.form__ok {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+}
+.status--role-moderator,
+.status--role-admin,
+.status--invite-open {
+  background: var(--color-accent-soft);
+  border-color: transparent;
+  color: var(--color-accent);
+}
+.status--invite-revoked,
+.status--invite-expired {
+  border-style: dashed;
+}
+
+/* ---------- Community: comments, votes, reports ---------- */
+.comment__action > summary,
+.admin-details > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  cursor: pointer;
+}
+.comment__action[open] > summary {
+  margin-bottom: var(--space-2);
+}
+.comment-form {
+  padding-top: var(--space-4);
+  border-top: var(--border);
+}
+.outcome {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.outcome legend {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+.outcome__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+}
+.action-form .outcome__option input {
+  width: 1.25rem;
+  height: 1.25rem;
+  min-height: 0;
+  accent-color: var(--color-accent);
+}
+.quoted {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-border-strong);
+  background: var(--color-surface);
+}
+.quoted footer {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+.status--report-open {
+  background: var(--color-accent-soft);
+  border-color: transparent;
+  color: var(--color-accent);
+}

@@ -12,6 +12,51 @@ import { isUuid } from "@/lib/data/filters";
 import { campusLabels, formatDate, opportunityLabels, resultLabels } from "@/lib/data/labels";
 import { getExperience } from "@/lib/data/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { HelpfulButton } from "@/components/community/HelpfulButton";
+import { ReportFields } from "@/components/community/ReportFields";
+import { ActionForm } from "@/components/ui/ActionForm";
+import { getViewer } from "@/lib/auth/session";
+import { COMMENT_MAX, COMMENT_MIN } from "@/lib/community/labels";
+import {
+  addCommentAction,
+  deleteCommentAction,
+  reportCommentAction,
+  reportExperienceAction,
+} from "./actions";
+
+type Participation =
+  | { kind: "visitor" }
+  | { kind: "setup" }
+  | { kind: "none" }
+  | {
+      kind: "member";
+      isAuthor: boolean;
+      voted: boolean;
+      reportedPost: boolean;
+      reportedComments: Set<string>;
+    };
+
+/** What the viewer may do here. Display only: the database enforces every rule again. */
+async function participation(id: string): Promise<Participation> {
+  const viewer = await getViewer();
+  if (!viewer) return { kind: "visitor" };
+  const p = viewer.profile;
+  if (!p || p.deletionRequested) return { kind: "none" };
+  if (!p.onboarded) return { kind: "setup" };
+  const [own, vote, report, commentReports] = await Promise.all([
+    viewer.db.from("my_experiences").select("id").eq("id", id).maybeSingle(),
+    viewer.db.from("my_votes").select("experience_id").eq("experience_id", id).maybeSingle(),
+    viewer.db.from("my_reports").select("id").eq("experience_id", id).maybeSingle(),
+    viewer.db.from("my_comment_reports").select("comment_id"),
+  ]);
+  return {
+    kind: "member",
+    isAuthor: !!own.data,
+    voted: !!vote.data,
+    reportedPost: !!report.data,
+    reportedComments: new Set((commentReports.data ?? []).map((r) => r.comment_id)),
+  };
+}
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -37,6 +82,19 @@ export default async function ExperienceDetailPage({ params }: Props) {
   if (!r.configured) return <NotConfigured />;
   const exp = r.exp;
   if (!exp) notFound();
+  const who = await participation(exp.id);
+  const signInHref = `/sign-in?next=${encodeURIComponent(`/experiences/${exp.id}`)}`;
+  const joinPrompt =
+    who.kind === "visitor" ? (
+      <p className="signin-note">
+        <Link href={signInHref}>Sign in with your RNSIT Google account</Link> to vote, comment or
+        report.
+      </p>
+    ) : who.kind === "setup" ? (
+      <p className="signin-note">
+        <Link href="/onboarding">Finish setting up your account</Link> to vote, comment or report.
+      </p>
+    ) : null;
 
   const eligibility = [
     exp.minCgpa !== null ? `Minimum CGPA ${exp.minCgpa}` : null,
@@ -112,24 +170,83 @@ export default async function ExperienceDetailPage({ params }: Props) {
               {exp.comments.length ? (
                 <ul className="comments list-reset">
                   {exp.comments.map((c) => (
-                    <li key={c.id} className="comment">
+                    <li key={c.id} className="comment" id={`comment-${c.id}`}>
                       <p className="comment__meta">
                         <strong>{c.authorName ?? "Post author"}</strong>
                         {c.byPostAuthor && c.authorName ? <Badge>Author</Badge> : null}
+                        {c.isMine ? <Badge>You</Badge> : null}
                         {c.postedOn ? (
                           <time dateTime={c.postedOn}>{formatDate(c.postedOn)}</time>
                         ) : null}
                       </p>
                       <p className="prewrap">{c.body}</p>
+                      {who.kind === "member" ? (
+                        c.isMine ? (
+                          <details className="comment__action">
+                            <summary>Delete</summary>
+                            <ActionForm
+                              action={deleteCommentAction}
+                              submitLabel="Delete my comment"
+                              danger
+                              label="Delete my comment"
+                            >
+                              <input type="hidden" name="id" value={exp.id} />
+                              <input type="hidden" name="comment" value={c.id} />
+                              <p className="field__hint">This cannot be undone.</p>
+                            </ActionForm>
+                          </details>
+                        ) : who.reportedComments.has(c.id) ? (
+                          <p className="field__hint">You reported this comment.</p>
+                        ) : (
+                          <details className="comment__action">
+                            <summary>Report</summary>
+                            <ActionForm
+                              action={reportCommentAction}
+                              submitLabel="Send report"
+                              label="Report comment"
+                            >
+                              <input type="hidden" name="id" value={exp.id} />
+                              <input type="hidden" name="comment" value={c.id} />
+                              <ReportFields idPrefix={`rc-${c.id}`} />
+                            </ActionForm>
+                          </details>
+                        )
+                      ) : null}
                     </li>
                   ))}
                 </ul>
               ) : (
                 <p className="muted">No comments yet.</p>
               )}
-              <p className="signin-note">
-                Adding a comment needs a verified RNSIT sign-in, which is not open yet.
-              </p>
+              {who.kind === "member" ? (
+                <ActionForm
+                  action={addCommentAction}
+                  submitLabel="Post comment"
+                  label="Add a comment"
+                  className="comment-form"
+                >
+                  <input type="hidden" name="id" value={exp.id} />
+                  <div className="field">
+                    <label htmlFor="comment-body">Add a comment</label>
+                    <textarea
+                      id="comment-body"
+                      name="body"
+                      rows={3}
+                      required
+                      minLength={COMMENT_MIN}
+                      maxLength={COMMENT_MAX}
+                      aria-describedby="comment-hint"
+                    />
+                    <p id="comment-hint" className="field__hint">
+                      {exp.authorName === null && who.isAuthor
+                        ? "Your comment will show as “Post author”, without your name."
+                        : "Shown with your name. Be kind; no personal or contact details."}
+                    </p>
+                  </div>
+                </ActionForm>
+              ) : (
+                joinPrompt
+              )}
             </section>
           </div>
 
@@ -162,23 +279,46 @@ export default async function ExperienceDetailPage({ params }: Props) {
 
             <div className="panel">
               <h2 className="panel__title">Helpful?</h2>
-              <p>
-                {exp.helpfulCount === 0
-                  ? "No helpful votes yet."
-                  : `${exp.helpfulCount} member${exp.helpfulCount === 1 ? "" : "s"} found this helpful.`}
-              </p>
-              <button
-                type="button"
-                className="btn btn--secondary btn--small btn--block"
-                aria-disabled="true"
-                aria-describedby="helpful-note"
-              >
-                Mark as helpful
-              </button>
-              <p id="helpful-note" className="field__hint">
-                Voting needs a verified RNSIT sign-in, which is not open yet.
-              </p>
+              {who.kind === "member" && !who.isAuthor ? (
+                <HelpfulButton id={exp.id} count={exp.helpfulCount} voted={who.voted} />
+              ) : (
+                <>
+                  <p className="helpful-count">
+                    {exp.helpfulCount === 0
+                      ? "No helpful votes yet."
+                      : `${exp.helpfulCount} member${exp.helpfulCount === 1 ? "" : "s"} found this helpful.`}
+                  </p>
+                  {who.kind === "member" ? (
+                    <p className="field__hint">
+                      This is your experience, so you cannot vote on it.
+                    </p>
+                  ) : (
+                    joinPrompt
+                  )}
+                </>
+              )}
             </div>
+
+            {who.kind === "member" && !who.isAuthor ? (
+              <div className="panel">
+                <h2 className="panel__title">Something wrong?</h2>
+                {who.reportedPost ? (
+                  <p>You reported this experience. Moderators will review it.</p>
+                ) : (
+                  <details className="comment__action">
+                    <summary>Report this experience</summary>
+                    <ActionForm
+                      action={reportExperienceAction}
+                      submitLabel="Send report"
+                      label="Report this experience"
+                    >
+                      <input type="hidden" name="id" value={exp.id} />
+                      <ReportFields idPrefix="rp" />
+                    </ActionForm>
+                  </details>
+                )}
+              </div>
+            ) : null}
 
             <div className="panel">
               <h2 className="panel__title">Eligibility</h2>

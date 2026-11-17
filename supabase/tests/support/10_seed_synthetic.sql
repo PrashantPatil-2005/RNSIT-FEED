@@ -12,8 +12,9 @@ insert into private.settings (key, value) values
 insert into public.departments (code, name) values
   ('CS', 'Computer Science (synthetic)'),
   ('IS', 'Information Science (synthetic)'),
-  ('EC', 'Electronics (synthetic)');
-insert into public.batches (grad_year) values (2026), (2027);
+  ('EC', 'Electronics (synthetic)')
+on conflict (code) do nothing;  -- migration 017 already provides the real branches
+insert into public.batches (grad_year) values (2026), (2027) on conflict (grad_year) do nothing;
 insert into public.topics (slug, name) values ('dsa', 'DSA'), ('dbms', 'DBMS'), ('os', 'OS');
 
 insert into public.companies (name, slug) values

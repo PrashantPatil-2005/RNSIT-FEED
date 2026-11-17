@@ -24,7 +24,9 @@
     "test:e2e:moderation": "node scripts/e2e-moderation.mjs",
     "db:types": "npx supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts && prettier --write src/lib/supabase/database.types.ts",
     "test:e2e:auth": "node scripts/e2e-auth.mjs",
-    "test:unit": "node --test \"tests/unit/*.test.mts\""
+    "test:unit": "node --test \"tests/unit/*.test.mts\"",
+    "test:e2e:admin": "node scripts/e2e-admin.mjs",
+    "test:e2e:community": "node scripts/e2e-community.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

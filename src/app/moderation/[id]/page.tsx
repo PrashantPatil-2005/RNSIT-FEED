@@ -24,6 +24,9 @@ import {
   type ReasonCode,
 } from "@/lib/moderation/labels";
 import { DecisionPanel } from "../DecisionPanel";
+import { moderateCommentAction, removeOrRestorePostAction } from "../actions";
+import { StaffReasonField } from "@/components/moderation/StaffFields";
+import { ActionForm } from "@/components/ui/ActionForm";
 
 export const metadata: Metadata = { title: "Review experience", robots: { index: false } };
 
@@ -81,7 +84,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   const viewer = await requireStaff(`/moderation/${encodeURIComponent(id)}`);
   if (!isUuid(id)) notFound();
 
-  const [detail, history, ref] = await Promise.all([
+  const [detail, history, ref, comments] = await Promise.all([
     viewer.db.rpc("moderation_experience_detail", { p_id: id }),
     viewer.db
       .from("moderation_history")
@@ -89,6 +92,12 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
       .eq("experience_id", id)
       .order("created_at", { ascending: true }),
     getReferenceData(viewer.db),
+    // Same anonymous-author masking as the public page; includes removed comments.
+    viewer.db
+      .from("moderation_comments")
+      .select("id, body, status, created_at, author_name, by_post_author, open_reports")
+      .eq("experience_id", id)
+      .order("created_at", { ascending: true }),
   ]);
   if (detail.error || !detail.data) notFound();
   const e = detail.data as unknown as ReviewJson;
@@ -199,6 +208,53 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                 </ul>
               ) : null}
             </section>
+
+            {comments.data?.length ? (
+              <section aria-labelledby="mod-comments-title" className="stack">
+                <h2 id="mod-comments-title">Comments ({comments.data.length})</h2>
+                <ul className="comments list-reset">
+                  {comments.data.map((c) => (
+                    <li key={c.id} id={`comment-${c.id}`} className="comment">
+                      <p className="comment__meta">
+                        <strong>
+                          {c.author_name ?? (c.by_post_author ? "Post author" : "Member")}
+                        </strong>
+                        {c.status === "removed" ? <Badge>Removed</Badge> : null}
+                        {c.open_reports ? (
+                          <Badge>
+                            {c.open_reports} open report{c.open_reports === 1 ? "" : "s"}
+                          </Badge>
+                        ) : null}
+                        <span>{stamp(c.created_at)}</span>
+                      </p>
+                      <p className="prewrap">{c.body}</p>
+                      <details className="comment__action">
+                        <summary>{c.status === "removed" ? "Restore" : "Remove"}</summary>
+                        <ActionForm
+                          action={moderateCommentAction}
+                          submitLabel={
+                            c.status === "removed" ? "Restore comment" : "Remove comment"
+                          }
+                          danger={c.status !== "removed"}
+                          label={c.status === "removed" ? "Restore comment" : "Remove comment"}
+                        >
+                          <input type="hidden" name="comment" value={c.id} />
+                          <input type="hidden" name="experience" value={e.id} />
+                          <input
+                            type="hidden"
+                            name="action"
+                            value={c.status === "removed" ? "restore" : "remove"}
+                          />
+                          {c.status === "removed" ? null : (
+                            <StaffReasonField id={`cm-reason-${c.id}`} required />
+                          )}
+                        </ActionForm>
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </div>
 
           <aside className="detail__aside" aria-label="Moderation">
@@ -223,6 +279,40 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                 ) : null}
               </div>
             )}
+
+            {!e.is_own && (e.status === "approved" || e.status === "removed") ? (
+              <div className="panel">
+                <h2 className="panel__title">
+                  {e.status === "approved" ? "Take down" : "Put back"}
+                </h2>
+                <ActionForm
+                  action={removeOrRestorePostAction}
+                  submitLabel={e.status === "approved" ? "Remove from public view" : "Restore"}
+                  danger={e.status === "approved"}
+                  label={e.status === "approved" ? "Remove from public view" : "Restore post"}
+                >
+                  <input type="hidden" name="id" value={e.id} />
+                  <input type="hidden" name="version" value={e.row_version} />
+                  <input
+                    type="hidden"
+                    name="action"
+                    value={e.status === "approved" ? "remove" : "restore"}
+                  />
+                  {e.status === "approved" ? (
+                    <>
+                      <p>Hides it from everyone. It can be restored later.</p>
+                      <StaffReasonField id="remove-reason" required />
+                      <div className="field">
+                        <label htmlFor="remove-note">Note to the author (optional)</label>
+                        <textarea id="remove-note" name="note" rows={3} maxLength={1000} />
+                      </div>
+                    </>
+                  ) : (
+                    <p>Makes it public again.</p>
+                  )}
+                </ActionForm>
+              </div>
+            ) : null}
 
             <div className="panel">
               <h2 className="panel__title">History</h2>

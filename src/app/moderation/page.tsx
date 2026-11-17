@@ -62,6 +62,17 @@ export default async function ModerationQueuePage({
     ),
   ]);
   const count = (s: QueueFilter) => counts[QUEUE_FILTERS.indexOf(s)]?.count ?? 0;
+  const [openPostReports, openCommentReports] = await Promise.all([
+    viewer.db
+      .from("moderation_reports")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
+    viewer.db
+      .from("moderation_comment_reports")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
+  ]);
+  const openReports = (openPostReports.count ?? 0) + (openCommentReports.count ?? 0);
   const rows = list.data ?? [];
 
   return (
@@ -78,6 +89,15 @@ export default async function ModerationQueuePage({
               <p>{done}</p>
             </Notice>
           ) : null}
+
+          <nav aria-label="Moderation sections" className="queue-tabs">
+            <Link href="/moderation" className="queue-tab" aria-current="page">
+              Experience queue
+            </Link>
+            <Link href="/moderation/reports" className="queue-tab">
+              Reports <span className="queue-tab__count">{openReports}</span>
+            </Link>
+          </nav>
 
           <nav aria-label="Filter by status" className="queue-tabs">
             {QUEUE_FILTERS.map((s) => (
