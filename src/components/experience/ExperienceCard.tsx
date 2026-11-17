@@ -46,6 +46,7 @@ export function ExperienceCard({
       </div>
       <p className="exp-card__byline">
         <span>{exp.authorName ?? "Anonymous"}</span>
+        {exp.helpfulCount ? <span>{exp.helpfulCount} found helpful</span> : null}
         {exp.publishedOn ? (
           <time dateTime={exp.publishedOn}>{formatDate(exp.publishedOn)}</time>
         ) : null}

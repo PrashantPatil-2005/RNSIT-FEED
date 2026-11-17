@@ -31,6 +31,7 @@ export interface ExperienceSummary {
   result: ResultType;
   publishedOn: string;
   authorName: string | null; // null = anonymous
+  helpfulCount?: number;
 }
 
 export interface ReferenceData {
@@ -118,6 +119,56 @@ export async function searchExperiences(
     hasMore: rows.length > pageSize,
     unknownFilter: false,
   };
+}
+
+/** Approved experiences with at least one helpful vote, most helpful first. */
+export async function listMostHelpful(db: DbClient, limit: number): Promise<ExperienceSummary[]> {
+  const top = await db
+    .from("public_engagement")
+    .select("experience_id, helpful_count")
+    .gt("helpful_count", 0)
+    .order("helpful_count", { ascending: false })
+    .limit(limit);
+  if (top.error) throw new DataError("public_engagement", top.error);
+  if (!top.data.length) return [];
+  const exps = await db
+    .from("public_experiences")
+    .select("*")
+    .in(
+      "id",
+      top.data.map((t) => t.experience_id),
+    );
+  if (exps.error) throw new DataError("public_experiences", exps.error);
+  const byId = new Map(exps.data.map((e) => [e.id, e]));
+  return top.data.flatMap((t): ExperienceSummary[] => {
+    const e = byId.get(t.experience_id);
+    if (
+      !e ||
+      !e.opportunity_type ||
+      !e.campus_type ||
+      !e.result ||
+      !e.role_title ||
+      !e.recruitment_year
+    )
+      return [];
+    return [
+      {
+        id: e.id,
+        companyName: e.company_name,
+        companySlug: e.company_slug,
+        roleTitle: e.role_title,
+        opportunityType: e.opportunity_type,
+        campusType: e.campus_type,
+        departmentCode: e.department_code,
+        batchYear: e.batch_year,
+        recruitmentYear: e.recruitment_year,
+        result: e.result,
+        publishedOn: e.published_on ?? "",
+        authorName: e.is_anonymous === false ? e.author_name : null,
+        helpfulCount: t.helpful_count ?? 0,
+      },
+    ];
+  });
 }
 
 export interface Round {

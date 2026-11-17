@@ -8,6 +8,7 @@ import { parseFilters } from "@/lib/data/filters";
 import {
   getReferenceData,
   listCompanies,
+  listMostHelpful,
   searchExperiences,
   type CompanyStats,
   type ExperienceSummary,
@@ -16,6 +17,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 async function loadHome(): Promise<{
   latest: ExperienceSummary[];
+  mostHelpful: ExperienceSummary[];
   companies: CompanyStats[];
   totalPosts: number;
   coveredCompanies: number;
@@ -23,13 +25,15 @@ async function loadHome(): Promise<{
   const db = await createSupabaseServerClient();
   if (!db) return null;
   const reference = await getReferenceData(db);
-  const [page, companies] = await Promise.all([
+  const [page, mostHelpful, companies] = await Promise.all([
     searchExperiences(db, parseFilters({}), reference, 6),
+    listMostHelpful(db, 3),
     listCompanies(db),
   ]);
   const covered = companies.filter((c) => c.postCount > 0);
   return {
     latest: page.items,
+    mostHelpful,
     companies: covered.slice(0, 8),
     totalPosts: covered.reduce((sum, c) => sum + c.postCount, 0),
     coveredCompanies: covered.length,
@@ -72,6 +76,23 @@ export default async function HomePage() {
           </div>
         </Container>
       </section>
+
+      {home && home.mostHelpful.length ? (
+        <section className="section" aria-labelledby="helpful-title">
+          <Container>
+            <div className="section__head section__head--row">
+              <h2 id="helpful-title">Most helpful</h2>
+            </div>
+            <ul className="exp-grid list-reset">
+              {home.mostHelpful.map((exp) => (
+                <li key={exp.id}>
+                  <ExperienceCard exp={exp} />
+                </li>
+              ))}
+            </ul>
+          </Container>
+        </section>
+      ) : null}
 
       <section className="section" aria-labelledby="latest-title">
         <Container>
