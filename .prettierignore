@@ -1,0 +1,7 @@
+.next
+node_modules
+package-lock.json
+docs
+CLAUDE.md
+README.md
+next-env.d.ts

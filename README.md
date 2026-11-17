@@ -48,6 +48,3 @@ This repository is public for transparency and visibility.
 
 This is an independent student initiative and is not an official RNSIT platform or affiliated with the institute.
 
-## Important
-
-Do not commit real student information, USNs, credentials, API keys or confidential data to this repository.
