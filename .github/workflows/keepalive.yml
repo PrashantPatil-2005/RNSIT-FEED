@@ -2,7 +2,7 @@
 # Uses only the public anon key (already shipped to every browser) to read the public departments
 # list, so nothing sensitive is stored in this public repository. Logs show the HTTP status only.
 #
-# Repository secrets (Settings > Secrets and variables > Actions):
+# Secrets in the "production" environment (Settings > Environments > production):
 #   SUPABASE_URL       https://<project-ref>.supabase.co
 #   SUPABASE_ANON_KEY  the project's anon / publishable key
 #
@@ -25,6 +25,7 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    environment: production
     steps:
       - name: Read one public row
         env:
