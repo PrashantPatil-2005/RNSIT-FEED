@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { PlannedFeature } from "@/components/ui/PlannedFeature";
 import { getViewer } from "@/lib/auth/session";
@@ -33,6 +34,8 @@ export default async function SharePage() {
       summary="A guided, round-by-round form for verified RNSIT students and alumni to pass on what they learned."
       noticeTitle="Sign in to share"
       notice="Sharing needs a verified RNSIT sign-in. Reading stays open to everyone."
+      badge={<Badge tone="accent">Sign-in required</Badge>}
+      listTitle="After you sign in, you can"
       willDo={[
         "Walk through the company, role and each interview round, with the questions in your own words.",
         "Have your draft saved automatically, so you can finish later on any device.",

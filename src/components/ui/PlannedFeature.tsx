@@ -15,6 +15,8 @@ export function PlannedFeature({
   willDo,
   noticeTitle = "Not open yet",
   notice = "This feature is not available yet. Nothing entered on this page is submitted or saved.",
+  badge = <Badge tone="accent">Coming soon</Badge>,
+  listTitle = "What you will be able to do",
   actions,
   children,
 }: {
@@ -24,17 +26,15 @@ export function PlannedFeature({
   willDo: readonly string[];
   noticeTitle?: string;
   notice?: ReactNode;
+  /** Header badge; pass null for none. Defaults to "Coming soon". */
+  badge?: ReactNode;
+  listTitle?: string;
   actions?: ReactNode;
   children?: ReactNode;
 }) {
   return (
     <>
-      <PageHeader
-        eyebrow={eyebrow}
-        title={title}
-        description={summary}
-        badge={<Badge tone="accent">Coming soon</Badge>}
-      />
+      <PageHeader eyebrow={eyebrow} title={title} description={summary} badge={badge} />
       <Container>
         <div className="section section--tight stack stack--lg planned">
           <Notice title={noticeTitle}>
@@ -42,7 +42,7 @@ export function PlannedFeature({
           </Notice>
           <section className="stack" aria-labelledby="will-do">
             <h2 id="will-do" className="h-small">
-              What you will be able to do
+              {listTitle}
             </h2>
             <ul className="checklist">
               {willDo.map((item) => (
