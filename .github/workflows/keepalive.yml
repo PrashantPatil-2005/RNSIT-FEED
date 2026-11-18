@@ -35,18 +35,18 @@ jobs:
           url=$(printf '%s' "$SUPABASE_URL" | tr -d " \t\r\n\"'")
           key=$(printf '%s' "$SUPABASE_ANON_KEY" | tr -d " \t\r\n\"'")
           url="${url%/}"
-          [ -n "$url" ] || { echo "Secret SUPABASE_URL is missing or empty."; exit 1; }
-          [ -n "$key" ] || { echo "Secret SUPABASE_ANON_KEY is missing or empty."; exit 1; }
-          case "$url" in https://*.supabase.co) ;; *) echo "SUPABASE_URL must look like https://<ref>.supabase.co"; exit 1 ;; esac
+          [ -n "$url" ] || { echo "::error::Secret SUPABASE_URL is missing or empty"; exit 1; }
+          [ -n "$key" ] || { echo "::error::Secret SUPABASE_ANON_KEY is missing or empty"; exit 1; }
+          case "$url" in https://*.supabase.co) ;; *) echo "::error::SUPABASE_URL must look like https://<ref>.supabase.co (length ${#url})"; exit 1 ;; esac
           case "$key" in
             sb_publishable_*) echo "key type: publishable" ;;
             eyJ*) echo "key type: legacy anon JWT" ;;
-            sb_secret_*) echo "SUPABASE_ANON_KEY is a SECRET key. Use the anon/publishable key instead."; exit 1 ;;
-            *) echo "key type: unrecognised (expected sb_publishable_... or eyJ...)" ;;
+            sb_secret_*) echo "::error::SUPABASE_ANON_KEY is a SECRET key. Use the anon/publishable key instead."; exit 1 ;;
+            *) echo "::warning::key type unrecognised (expected sb_publishable_ or eyJ), length ${#key}" ;;
           esac
           # Only the apikey header: it works for both key types, while a publishable key sent as a
           # Bearer token is rejected.
           code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 10 \
             "$url/rest/v1/departments?select=id&limit=1" -H "apikey: $key")
-          echo "keep-alive HTTP status: $code"
-          [ "$code" = "200" ] || { echo "Expected 200. 401 means the key is wrong for this project."; exit 1; }
+          echo "::notice::keep-alive HTTP status $code"
+          [ "$code" = "200" ] || { echo "::error::HTTP $code (401 = key wrong for this project, 404 = wrong URL)"; exit 1; }
