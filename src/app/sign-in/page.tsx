@@ -81,6 +81,14 @@ export default async function SignInPage({
             </Notice>
           )}
 
+          {available ? (
+            <p className="field__hint">
+              Moderator or admin? There is no separate staff login. Sign in with the same college
+              account: you go straight to your staff tools, which also appear under Staff in the
+              header.
+            </p>
+          ) : null}
+
           <section className="stack" aria-labelledby="what-we-keep">
             <h2 id="what-we-keep" className="h-small">
               What signing in shares
