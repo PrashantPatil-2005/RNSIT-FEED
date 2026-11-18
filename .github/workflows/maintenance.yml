@@ -1,0 +1,51 @@
+# Daily maintenance for the production Supabase project:
+#   keep-alive, retention clean-up (O-4, U3, U15) and pending account deletions (U5).
+# See scripts/ops/maintenance.sh. Logs contain counts only: never ids, emails or names.
+#
+# This repository is PUBLIC, so the service-role key is protected by:
+#   * the "production" environment, restricted to the main branch
+#     (Settings > Environments > production > Deployment branches: Selected branches > main);
+#   * only schedule and manual triggers (never pull_request), plus a main-branch guard below.
+#
+# Secrets in the "production" environment:
+#   SUPABASE_URL               https://<project-ref>.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY  server-only key (never NEXT_PUBLIC_, never in Vercel)
+name: maintenance
+
+on:
+  schedule:
+    - cron: "30 20 * * *" # 02:00 IST daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    if: github.ref == 'refs/heads/main' && github.repository == 'PrashantPatil-2005/RNSIT-FEED'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Keep-alive, retention clean-up, account deletions
+        shell: bash # -eo pipefail: a failing script fails the step even through tee
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::Secret SUPABASE_SERVICE_ROLE_KEY is not set in the production environment"
+            exit 1
+          fi
+          SUPABASE_URL=$(printf '%s' "$SUPABASE_URL" | tr -d " \t\r\n\"'")
+          SUPABASE_SERVICE_ROLE_KEY=$(printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | tr -d " \t\r\n\"'")
+          export SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY
+          bash scripts/ops/maintenance.sh | tee summary.txt
+          echo "::notice::$(tr '\n' ';' < summary.txt)"
