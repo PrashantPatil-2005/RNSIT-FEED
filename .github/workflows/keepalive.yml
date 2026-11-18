@@ -1,0 +1,41 @@
+# Keeps the free Supabase project awake: free projects pause after about 7 days without activity.
+# Uses only the public anon key (already shipped to every browser) to read the public departments
+# list, so nothing sensitive is stored in this public repository. Logs show the HTTP status only.
+#
+# Repository secrets (Settings > Secrets and variables > Actions):
+#   SUPABASE_URL       https://<project-ref>.supabase.co
+#   SUPABASE_ANON_KEY  the project's anon / publishable key
+#
+# Backups and account-deletion clean-up run from the private ops repository, not here.
+name: keepalive
+
+on:
+  schedule:
+    - cron: "15 3 * * *" # 08:45 IST daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read one public row
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Secrets SUPABASE_URL and SUPABASE_ANON_KEY are not set."; exit 1
+          fi
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 10 \
+            "${SUPABASE_URL%/}/rest/v1/departments?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "keep-alive HTTP status: $code"
+          [ "$code" = "200" ]
