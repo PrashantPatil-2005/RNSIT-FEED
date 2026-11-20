@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
+import { ReturnLink } from "@/components/layout/ReturnLink";
 import { StaffMenu } from "@/components/layout/StaffMenu";
 import { staffLinksFor } from "@/lib/auth/permissions";
 import { getViewer } from "@/lib/auth/session";
@@ -11,9 +12,9 @@ export async function AuthControls({ variant = "bar" }: { variant?: "bar" | "men
 
   if (!viewer) {
     return (
-      <Link className={linkClass} href="/sign-in">
+      <ReturnLink className={linkClass} base="/sign-in">
         Sign in
-      </Link>
+      </ReturnLink>
     );
   }
   const needsSetup = !viewer.profile?.onboarded;
@@ -36,10 +37,16 @@ export async function AuthControls({ variant = "bar" }: { variant?: "bar" | "men
           ))}
         </nav>
       )}
-      <Link className={linkClass} href={needsSetup ? "/onboarding" : "/account"}>
-        {needsSetup ? "Finish setup" : firstName}
-        <span className="visually-hidden">{needsSetup ? "" : ", your account"}</span>
-      </Link>
+      {needsSetup ? (
+        <ReturnLink className={linkClass} base="/onboarding">
+          Finish setup
+        </ReturnLink>
+      ) : (
+        <Link className={linkClass} href="/account">
+          {firstName}
+          <span className="visually-hidden">, your account</span>
+        </Link>
+      )}
       <form action={signOut}>
         <button
           type="submit"

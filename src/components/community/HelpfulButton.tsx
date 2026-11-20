@@ -7,8 +7,22 @@ function countText(n: number): string {
   return n === 0 ? "No helpful votes yet." : `${n} member${n === 1 ? "" : "s"} found this helpful.`;
 }
 
-/** Toggle for the member's own helpful vote. Who voted is never shown, only the count. */
-export function HelpfulButton({ id, count, voted }: { id: string; count: number; voted: boolean }) {
+/**
+ * Toggle for the member's own helpful vote. Who voted is never shown, only the count.
+ * `justSignedIn`: the member came back from sign-in after clicking "Mark as helpful" as a visitor.
+ * The button is focused and asks them to confirm; it never votes by itself.
+ */
+export function HelpfulButton({
+  id,
+  count,
+  voted,
+  justSignedIn = false,
+}: {
+  id: string;
+  count: number;
+  voted: boolean;
+  justSignedIn?: boolean;
+}) {
   const [state, run, pending] = useActionState<HelpfulState, FormData>(helpfulAction, {
     count,
     voted,
@@ -36,6 +50,7 @@ export function HelpfulButton({ id, count, voted }: { id: string; count: number;
         className={`btn btn--small btn--block ${state.voted ? "btn--primary" : "btn--secondary"}`}
         aria-pressed={state.voted}
         disabled={pending}
+        autoFocus={justSignedIn && !voted}
       >
         {state.voted ? "Marked as helpful" : "Mark as helpful"}
       </button>
@@ -45,7 +60,11 @@ export function HelpfulButton({ id, count, voted }: { id: string; count: number;
         </p>
       ) : (
         <p className="field__hint">
-          {state.voted ? "Select again to undo." : "Anonymous: only the count is shown."}
+          {state.voted
+            ? "Select again to undo."
+            : justSignedIn
+              ? "You are signed in. Select to confirm your vote."
+              : "Anonymous: only the count is shown."}
         </p>
       )}
     </form>
