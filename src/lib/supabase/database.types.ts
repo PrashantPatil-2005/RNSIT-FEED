@@ -1018,17 +1018,20 @@ export type Database = {
       };
       topics: {
         Row: {
+          active: boolean;
           id: number;
           name: string;
           slug: string;
         };
         ComputedFields: never;
         Insert: {
+          active?: boolean;
           id?: never;
           name: string;
           slug: string;
         };
         Update: {
+          active?: boolean;
           id?: never;
           name?: string;
           slug?: string;
@@ -1991,14 +1994,22 @@ export type Database = {
         Args: { p_name: string; p_reason: string; p_user: string };
         Returns: undefined;
       };
+      admin_create_batch: { Args: { p_reason: string; p_year: number }; Returns: number };
       admin_create_company: {
         Args: { p_name: string; p_reason: string; p_slug: string };
         Returns: string;
+      };
+      admin_create_department: {
+        Args: { p_code: string; p_name: string; p_reason: string };
+        Returns: number;
       };
       admin_create_topic: {
         Args: { p_name: string; p_reason: string; p_slug: string };
         Returns: number;
       };
+      admin_delete_batch: { Args: { p_batch: number; p_reason: string }; Returns: undefined };
+      admin_delete_company: { Args: { p_company: string; p_reason: string }; Returns: undefined };
+      admin_delete_topic: { Args: { p_reason: string; p_topic: number }; Returns: undefined };
       admin_get_usn: { Args: { p_reason: string; p_user: string }; Returns: string };
       admin_invite_alumnus: { Args: { p_email: string; p_reason: string }; Returns: string };
       admin_list_alumni_invites: {
@@ -2035,6 +2046,10 @@ export type Database = {
           value: string;
         }[];
       };
+      admin_merge_companies: {
+        Args: { p_from: string; p_into: string; p_reason: string };
+        Returns: number;
+      };
       admin_moderator_activity: {
         Args: { p_days?: number };
         Returns: {
@@ -2056,6 +2071,22 @@ export type Database = {
         }[];
       };
       admin_owner_id: { Args: Record<PropertyKey, never>; Returns: string };
+      admin_reference_usage: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          kind: string;
+          ref_id: string;
+          uses: number;
+        }[];
+      };
+      admin_remove_company_alias: {
+        Args: { p_alias: string; p_company: string; p_reason: string };
+        Returns: undefined;
+      };
+      admin_rename_company: {
+        Args: { p_company: string; p_name: string; p_reason: string };
+        Returns: undefined;
+      };
       admin_rename_topic: {
         Args: { p_name: string; p_reason: string; p_topic: number };
         Returns: undefined;
@@ -2064,6 +2095,10 @@ export type Database = {
       admin_revoke_alumni_invite: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_set_setting: {
         Args: { p_key: string; p_reason: string; p_value: string };
+        Returns: undefined;
+      };
+      admin_set_topic_active: {
+        Args: { p_active: boolean; p_reason: string; p_topic: number };
         Returns: undefined;
       };
       admin_set_user_role: {
@@ -2076,6 +2111,10 @@ export type Database = {
       };
       admin_unassign_moderator_department: {
         Args: { p_department: number; p_reason: string; p_user: string };
+        Returns: undefined;
+      };
+      admin_update_department: {
+        Args: { p_active: boolean; p_department: number; p_name: string; p_reason: string };
         Returns: undefined;
       };
       admin_user_role_history: {
@@ -2255,7 +2294,8 @@ export type Database = {
         | "moderator_step_down"
         | "manage_topic"
         | "owner_auto_admin"
-        | "change_setting";
+        | "change_setting"
+        | "manage_reference";
       campus_type: "on_campus" | "off_campus";
       comment_status: "visible" | "removed";
       exp_status:
@@ -2425,6 +2465,7 @@ export const Constants = {
         "manage_topic",
         "owner_auto_admin",
         "change_setting",
+        "manage_reference",
       ],
       campus_type: ["on_campus", "off_campus"],
       comment_status: ["visible", "removed"],

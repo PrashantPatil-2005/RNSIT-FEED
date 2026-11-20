@@ -361,3 +361,209 @@ export async function setSettingAction(_prev: ActionState, data: FormData): Prom
   revalidatePath("/", "layout");
   return { ok: settingDone[key](key === "site_notice" ? value : value.toLowerCase()) };
 }
+
+// ---------- Reference data (migration 028): hide by default, delete only when unused ----------
+
+function smallId(data: FormData, key: string): number | null {
+  const n = Number(text(data, key, 10));
+  return Number.isInteger(n) && n >= 1 && n <= 32767 ? n : null;
+}
+
+async function referenceCall(
+  fn: () => PromiseLike<{ error: { message: string } | null }>,
+  ok: string,
+  paths: string[] = [],
+): Promise<ActionState> {
+  const { error } = await fn();
+  if (error) return { error: adminErrorMessage(error.message) };
+  revalidatePath("/admin", "layout");
+  for (const p of paths) revalidatePath(p, "layout");
+  return { ok };
+}
+
+export async function renameCompanyAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const company = text(data, "company", 40);
+  const name = text(data, "name", 200);
+  const reason = text(data, "reason");
+  if (!isUuid(company)) return { error: "Invalid request." };
+  if (name.length < 1 || name.length > 120)
+    return { error: "Enter a name of 1 to 120 characters." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () => v.db.rpc("admin_rename_company", { p_company: company, p_name: name, p_reason: reason }),
+    `Renamed to ${name}. The old name still finds it in search.`,
+    ["/"],
+  );
+}
+
+export async function removeAliasAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const company = text(data, "company", 40);
+  const alias = text(data, "alias", 200);
+  const reason = text(data, "reason");
+  if (!isUuid(company) || !alias) return { error: "Choose an alias." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () =>
+      v.db.rpc("admin_remove_company_alias", {
+        p_company: company,
+        p_alias: alias,
+        p_reason: reason,
+      }),
+    `Alias "${alias}" removed.`,
+  );
+}
+
+export async function mergeCompanyAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const from = text(data, "company", 40);
+  const into = text(data, "into", 40);
+  const reason = text(data, "reason");
+  if (!isUuid(from) || !isUuid(into)) return { error: "Choose the company to merge into." };
+  if (from === into) return { error: "Choose a different company." };
+  if (data.get("confirm_merge") !== "yes")
+    return { error: "Tick the box to confirm the merge. It cannot be undone." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { data: moved, error } = await v.db.rpc("admin_merge_companies", {
+    p_from: from,
+    p_into: into,
+    p_reason: reason,
+  });
+  if (error) return { error: adminErrorMessage(error.message) };
+  revalidatePath("/", "layout");
+  return { ok: `Merged. ${moved ?? 0} ${moved === 1 ? "post" : "posts"} moved.` };
+}
+
+export async function deleteCompanyAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const company = text(data, "company", 40);
+  const reason = text(data, "reason");
+  if (!isUuid(company)) return { error: "Invalid request." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () => v.db.rpc("admin_delete_company", { p_company: company, p_reason: reason }),
+    "Company deleted.",
+    ["/"],
+  );
+}
+
+export async function setTopicActiveAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const topic = smallId(data, "topic");
+  const active = text(data, "active", 5) === "true";
+  const reason = text(data, "reason");
+  if (!topic) return { error: "Invalid request." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () =>
+      v.db.rpc("admin_set_topic_active", { p_topic: topic, p_active: active, p_reason: reason }),
+    active ? "Topic shown in the post form again." : "Topic hidden from the post form.",
+    ["/share"],
+  );
+}
+
+export async function deleteTopicAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const topic = smallId(data, "topic");
+  const reason = text(data, "reason");
+  if (!topic) return { error: "Invalid request." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () => v.db.rpc("admin_delete_topic", { p_topic: topic, p_reason: reason }),
+    "Topic deleted.",
+    ["/share"],
+  );
+}
+
+export async function createDepartmentAction(
+  _p: ActionState,
+  data: FormData,
+): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const code = text(data, "code", 10).toUpperCase();
+  const name = text(data, "name", 200);
+  const reason = text(data, "reason");
+  if (!/^[A-Z]{2}$/.test(code)) return { error: "Enter a two-letter code, for example CS." };
+  if (name.length < 2 || name.length > 120)
+    return { error: "Enter a name of 2 to 120 characters." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () => v.db.rpc("admin_create_department", { p_code: code, p_name: name, p_reason: reason }),
+    `Added ${code}: ${name}.`,
+    ["/"],
+  );
+}
+
+export async function updateDepartmentAction(
+  _p: ActionState,
+  data: FormData,
+): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const department = smallId(data, "department");
+  const name = text(data, "name", 200);
+  const active = data.get("active") === "yes";
+  const reason = text(data, "reason");
+  if (!department) return { error: "Invalid request." };
+  if (name.length < 2 || name.length > 120)
+    return { error: "Enter a name of 2 to 120 characters." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () =>
+      v.db.rpc("admin_update_department", {
+        p_department: department,
+        p_name: name,
+        p_active: active,
+        p_reason: reason,
+      }),
+    active ? "Department saved." : "Department saved and hidden from new choices.",
+    ["/"],
+  );
+}
+
+export async function createBatchAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const year = Number(text(data, "year", 6));
+  const reason = text(data, "reason");
+  if (!Number.isInteger(year) || year < 2000 || year > 2100)
+    return { error: "Enter a year from 2000 to 2100." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () => v.db.rpc("admin_create_batch", { p_year: year, p_reason: reason }),
+    `Added batch ${year}.`,
+    ["/"],
+  );
+}
+
+export async function deleteBatchAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const batch = smallId(data, "batch");
+  const reason = text(data, "reason");
+  if (!batch) return { error: "Invalid request." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () => v.db.rpc("admin_delete_batch", { p_batch: batch, p_reason: reason }),
+    "Batch deleted.",
+    ["/"],
+  );
+}

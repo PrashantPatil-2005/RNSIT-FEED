@@ -5,20 +5,32 @@ import { Container } from "@/components/layout/Container";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { requireAdmin } from "@/lib/auth/staff";
-import { createTopicAction, renameTopicAction } from "../actions";
+import {
+  createTopicAction,
+  deleteTopicAction,
+  renameTopicAction,
+  setTopicActiveAction,
+} from "../actions";
 
 export const metadata: Metadata = { title: "Topics · Admin", robots: { index: false } };
 
 export default async function AdminTopicsPage() {
   const viewer = await requireAdmin("/admin/topics");
-  const topics = await viewer.db.from("topics").select("id, name, slug").order("name").limit(500);
+  const [topics, usage] = await Promise.all([
+    viewer.db.from("topics").select("id, name, slug, active").order("name").limit(500),
+    viewer.db.rpc("admin_reference_usage"),
+  ]);
+  // Rounds and questions tagged with each topic (any status). Delete is offered only at zero.
+  const uses = new Map(
+    (usage.data ?? []).filter((u) => u.kind === "topic").map((u) => [u.ref_id, u.uses]),
+  );
 
   return (
     <>
       <PageHeader
         eyebrow="Admin"
         title="Topics"
-        description="Members tag interview rounds and questions with these topics (DSA, DBMS and so on). Topics can be added or renamed, not deleted, because published posts use them."
+        description="Members tag interview rounds and questions with these topics (DSA, DBMS and so on). Hide a topic to remove it from the post form; posts that already use it keep it. A topic can be deleted only while nothing uses it."
       />
       <Container>
         <div className="section section--tight stack stack--lg">
@@ -77,39 +89,83 @@ export default async function AdminTopicsPage() {
               </StateMessage>
             ) : (
               <ul className="my-list list-reset" aria-label="Topics">
-                {topics.data.map((t) => (
-                  <li key={t.id} className="my-item">
-                    <div>
-                      <p className="my-item__title">{t.name}</p>
-                      <p className="my-item__meta">
-                        <span>Code: {t.slug}</span>
-                      </p>
-                    </div>
-                    <details className="admin-details">
-                      <summary>Rename</summary>
-                      <ActionForm
-                        action={renameTopicAction}
-                        submitLabel="Rename"
-                        label={`Rename ${t.name}`}
-                      >
-                        <input type="hidden" name="topic" value={t.id} />
-                        <div className="field">
-                          <label htmlFor={`topic-name-${t.id}`}>New name</label>
-                          <input
-                            id={`topic-name-${t.id}`}
-                            name="name"
-                            type="text"
-                            required
-                            minLength={2}
-                            maxLength={80}
-                            defaultValue={t.name}
-                          />
-                        </div>
-                        <ReasonField id={`topic-reason-${t.id}`} />
-                      </ActionForm>
-                    </details>
-                  </li>
-                ))}
+                {topics.data.map((t) => {
+                  const used = uses.get(String(t.id)) ?? 0;
+                  return (
+                    <li key={t.id} className="my-item">
+                      <div>
+                        <p className="my-item__title">
+                          {t.name}{" "}
+                          {t.active ? null : (
+                            <span className="status status--rejected">Hidden</span>
+                          )}
+                        </p>
+                        <p className="my-item__meta">
+                          <span>Code: {t.slug}</span>
+                          <span>
+                            Used {used} {used === 1 ? "time" : "times"}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="admin-user__actions">
+                        <details className="admin-details">
+                          <summary>Rename</summary>
+                          <ActionForm
+                            action={renameTopicAction}
+                            submitLabel="Rename"
+                            label={`Rename ${t.name}`}
+                          >
+                            <input type="hidden" name="topic" value={t.id} />
+                            <div className="field">
+                              <label htmlFor={`topic-name-${t.id}`}>New name</label>
+                              <input
+                                id={`topic-name-${t.id}`}
+                                name="name"
+                                type="text"
+                                required
+                                minLength={2}
+                                maxLength={80}
+                                defaultValue={t.name}
+                              />
+                            </div>
+                            <ReasonField id={`topic-reason-${t.id}`} />
+                          </ActionForm>
+                        </details>
+                        <details className="admin-details">
+                          <summary>{t.active ? "Hide" : "Show again"}</summary>
+                          <ActionForm
+                            action={setTopicActiveAction}
+                            submitLabel={t.active ? "Hide topic" : "Show topic"}
+                            label={`${t.active ? "Hide" : "Show"} ${t.name}`}
+                            danger={t.active}
+                          >
+                            <input type="hidden" name="topic" value={t.id} />
+                            <input
+                              type="hidden"
+                              name="active"
+                              value={t.active ? "false" : "true"}
+                            />
+                            <ReasonField id={`topic-active-reason-${t.id}`} />
+                          </ActionForm>
+                        </details>
+                        {used === 0 ? (
+                          <details className="admin-details">
+                            <summary>Delete</summary>
+                            <ActionForm
+                              action={deleteTopicAction}
+                              submitLabel="Delete topic"
+                              label={`Delete ${t.name}`}
+                              danger
+                            >
+                              <input type="hidden" name="topic" value={t.id} />
+                              <ReasonField id={`topic-delete-reason-${t.id}`} />
+                            </ActionForm>
+                          </details>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>

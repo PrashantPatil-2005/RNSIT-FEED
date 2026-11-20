@@ -36,9 +36,20 @@ async function pageFor(user, viewport = { width: 1280, height: 900 }) {
   return { ctx, page: await ctx.newPage() };
 }
 
+/**
+ * A list row by the text of its title. Matching on the whole row is not safe: rows carry other
+ * rows' names inside their forms (for example the merge-into dropdown on the companies page).
+ */
+function rowByTitle(page, title) {
+  return page
+    .locator("li.my-item")
+    .filter({ has: page.locator(".my-item__title", { hasText: title }) })
+    .first();
+}
+
 /** Opens a row's <details> section and returns its form. */
 async function openForm(page, rowText, summary) {
-  const row = page.locator("li.my-item", { hasText: rowText }).first();
+  const row = rowByTitle(page, rowText);
   const section = row.locator("details", { has: page.locator(`summary:has-text('${summary}')`) });
   await section.locator("summary").click();
   return section.locator("form");
@@ -303,9 +314,7 @@ try {
   await p.reload({ waitUntil: "networkidle" });
   check(
     "alias listed under the company",
-    (await p.locator("li.my-item", { hasText: companyName }).textContent())?.includes(
-      `E2E Alias ${tag}`,
-    ),
+    (await rowByTitle(p, companyName).textContent())?.includes(`E2E Alias ${tag}`),
   );
 
   // ---------- Topics ----------
@@ -338,6 +347,104 @@ try {
       `${topicName} Renamed|${topicSlug}`,
   );
 
+  // ---------- Reference data: companies, topics, departments, batches ----------
+  const dupName = `E2E Dup Co ${tag}`;
+  await p.goto(`${APP}/admin/companies`, { waitUntil: "networkidle" });
+  const cf2 = p.getByRole("form", { name: "Add a company" });
+  await cf2.locator("input[name=name]").fill(dupName);
+  await cf2.locator("input[name=reason]").fill("Duplicate spelling to merge");
+  await cf2.locator("button[type=submit]").click();
+  await cf2.locator(".form__ok").waitFor();
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, dupName, "Merge into another");
+  await form.locator("select[name=into]").selectOption({ label: companyName });
+  await form.locator("input[name=reason]").fill("Same company, two spellings");
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__error").waitFor();
+  check(
+    "merge needs the confirmation tick",
+    (await form.locator(".form__error").textContent())?.includes("Tick the box"),
+  );
+  await form.locator("input[name=confirm_merge]").check();
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, dupName).waitFor({ state: "detached" });
+  check(
+    "merged company gone, its name kept as alias",
+    psql(`select count(*) from public.companies where name = '${dupName}'`) === "0" &&
+      psql(`select count(*) from public.company_aliases where alias = '${dupName}'`) === "1",
+  );
+  form = await openForm(p, companyName, "Rename");
+  await form.locator("input[name=name]").fill(`${companyName} Renamed`);
+  await form.locator("input[name=reason]").fill("Official name changed");
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__ok").waitFor();
+  check(
+    "company renamed, old name kept as alias",
+    psql(`select count(*) from public.company_aliases where alias = '${companyName}'`) === "1",
+  );
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, `${companyName} Renamed`, "Delete");
+  await form.locator("input[name=reason]").fill("Created only for this test");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, `${companyName} Renamed`).waitFor({ state: "detached" });
+  check(
+    "unused company deleted",
+    psql(`select count(*) from public.companies where name like '${companyName}%'`) === "0",
+  );
+  check(
+    "used companies offer no delete",
+    (await p
+      .locator("li.my-item")
+      .filter({ has: p.locator(".my-item__title", { hasText: "Acme Synthetic" }) })
+      .locator("summary:has-text('Delete')")
+      .count()) === 0,
+  );
+
+  await p.goto(`${APP}/admin/topics`, { waitUntil: "networkidle" });
+  form = await openForm(p, `${topicName} Renamed`, "Hide");
+  await form.locator("input[name=reason]").fill("Not asked any more");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, `${topicName} Renamed`).locator(".status", { hasText: "Hidden" }).waitFor();
+  check(
+    "topic hidden",
+    psql(`select active from public.topics where slug = '${topicSlug}'`) === "f",
+  );
+
+  const deptCode = "Q" + String.fromCharCode(65 + (Date.now() % 26));
+  psql(`delete from public.departments where code = '${deptCode}'`);
+  await p.goto(`${APP}/admin/reference`, { waitUntil: "networkidle" });
+  const rf = p.getByRole("form", { name: "Add a department" });
+  await rf.locator("input[name=code]").fill(deptCode.toLowerCase());
+  await rf.locator("input[name=name]").fill(`E2E Dept ${tag}`);
+  await rf.locator("input[name=reason]").fill("New branch this year");
+  await rf.locator("button[type=submit]").click();
+  await rf.locator(".form__ok").waitFor();
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, `E2E Dept ${tag}`, "Edit");
+  await form.locator("input[name=active]").uncheck();
+  await form.locator("input[name=reason]").fill("Branch closed for now");
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__ok").waitFor();
+  check(
+    "department added (code upper-cased) and hidden",
+    psql(`select active from public.departments where code = '${deptCode}'`) === "f",
+  );
+  const bf = p.getByRole("form", { name: "Add a batch" });
+  await bf.locator("input[name=year]").fill("2098");
+  await bf.locator("input[name=reason]").fill("Future batch for testing");
+  await bf.locator("button[type=submit]").click();
+  await bf.locator(".form__ok").waitFor();
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, "Batch 2098", "Delete");
+  await form.locator("input[name=reason]").fill("Added by mistake today");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, "Batch 2098").waitFor({ state: "detached" });
+  check(
+    "unused batch deleted",
+    psql(`select count(*) from public.batches where grad_year = 2098`) === "0",
+  );
+  psql(`delete from public.departments where code = '${deptCode}'`);
+
   // ---------- Site settings ----------
   const notice = `E2E notice ${tag}`;
   await p.goto(`${APP}/admin/settings`, { waitUntil: "networkidle" });
@@ -354,8 +461,7 @@ try {
     (await vpage.textContent(".status-banner"))?.includes(notice),
   );
   await p.reload({ waitUntil: "networkidle" });
-  const commentsRow = p.locator("li.my-item", { hasText: "Members can comment" }).first();
-  form = await openForm(p, "Members can comment", "Pause comments");
+  form = await openForm(p, "Comments", "Pause comments");
   await form.locator("input[name=reason]").fill("Too much spam tonight");
   await form.locator("button[type=submit]").click();
   await p.locator("li.my-item .status", { hasText: "Paused" }).first().waitFor();
@@ -369,10 +475,10 @@ try {
     (await vpage.textContent(".status-banner"))?.includes("Paused for now: comments"),
   );
   await p.reload({ waitUntil: "networkidle" });
-  form = await openForm(p, "Members cannot add comments", "Reopen");
+  form = await openForm(p, "Comments", "Reopen");
   await form.locator("input[name=reason]").fill("Spam has stopped now");
   await form.locator("button[type=submit]").click();
-  await commentsRow.waitFor();
+  await rowByTitle(p, "Comments").locator(".status", { hasText: "Open" }).waitFor();
   check(
     "comments reopened",
     psql(`select value from private.settings where key = 'comments_open'`) === "true",
@@ -414,6 +520,7 @@ try {
       "Company list changed",
       "Topic list changed",
       "Site setting changed",
+      "Departments or batches changed",
       "Audit log viewed",
     ].every((t) => log.includes(t)),
   );
@@ -436,6 +543,7 @@ try {
     "/admin/companies",
     "/admin/topics",
     "/admin/settings",
+    "/admin/reference",
     "/admin/audit",
   ]) {
     await m.page.goto(`${APP}${path}`, { waitUntil: "networkidle" });

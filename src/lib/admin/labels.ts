@@ -32,6 +32,7 @@ export const ADMIN_SECTIONS = [
   { href: "/admin/invites", label: "Alumni invites" },
   { href: "/admin/companies", label: "Companies" },
   { href: "/admin/topics", label: "Topics" },
+  { href: "/admin/reference", label: "Departments and batches" },
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/audit", label: "Audit log" },
 ] as const;
@@ -57,6 +58,7 @@ export const auditActionLabels: Record<string, string> = {
   moderator_step_down: "Moderator stepped down",
   owner_auto_admin: "Owner signed up as admin",
   change_setting: "Site setting changed",
+  manage_reference: "Departments or batches changed",
 };
 
 /**
@@ -90,6 +92,12 @@ export function adminErrorMessage(raw: string, context: "role" | "department" = 
     ["company_aliases_alias_lower_key", "This alias is already used."],
     ["topics_name_lower_key", "A topic with this name already exists."],
     ["topics_slug_key", "A topic with this short code already exists."],
+    [
+      "in_use",
+      "Posts or members still use this, so it cannot be deleted. Hide or merge it instead.",
+    ],
+    ["departments_code_key", "A department with this code already exists."],
+    ["batches_grad_year_key", "This batch already exists."],
     ["not_found", "It no longer exists. Reload the page."],
     ["forbidden", "Not allowed. Admins cannot change their own role."],
     ["invalid_input", "Check the values and try again."],

@@ -115,6 +115,11 @@ export default async function AdminOverviewPage() {
       text: `Tags for interview rounds and questions. ${topicCount} topics.`,
     },
     {
+      href: "/admin/reference",
+      title: "Departments and batches",
+      text: "Add or rename branches, hide old ones, add graduation years.",
+    },
+    {
       href: "/admin/settings",
       title: "Site settings",
       text: "Pause sign-ups, posting or comments, publish a banner notice, set the email domain.",
