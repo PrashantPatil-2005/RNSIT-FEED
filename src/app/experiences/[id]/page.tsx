@@ -41,7 +41,7 @@ async function participation(id: string): Promise<Participation> {
   const viewer = await getViewer();
   if (!viewer) return { kind: "visitor" };
   const p = viewer.profile;
-  if (!p || p.deletionRequested) return { kind: "none" };
+  if (!p || p.deletionRequested || p.suspended) return { kind: "none" };
   if (!p.onboarded) return { kind: "setup" };
   const [own, vote, report, commentReports] = await Promise.all([
     viewer.db.from("my_experiences").select("id").eq("id", id).maybeSingle(),

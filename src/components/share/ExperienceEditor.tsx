@@ -34,6 +34,7 @@ const saveMessages: Record<SaveErrorCode, string> = {
   not_found: "This draft no longer exists.",
   draft_limit: "You already have 10 drafts. Delete one to start another.",
   invalid: "Some details could not be saved. Check the highlighted fields.",
+  suspended: "Your account is suspended by the site team, so nothing can be saved.",
   failed: "Saving failed. Check your connection; we will retry when you edit again.",
 };
 

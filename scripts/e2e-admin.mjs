@@ -13,6 +13,8 @@ import {
   requireDemoData,
   sessionCookies,
   setRole,
+  submitAs,
+  psqlAs,
   waitForApp,
   waitForFormReset,
 } from "./lib/local.mjs";
@@ -347,6 +349,80 @@ try {
       `${topicName} Renamed|${topicSlug}`,
   );
 
+  // ---------- Users: suspend, fix details, delete; posts: fix text, delete ----------
+  await p.goto(`${APP}/admin/users?q=${encodeURIComponent(studentName)}`, {
+    waitUntil: "networkidle",
+  });
+  form = await openForm(p, studentName, "Suspend");
+  await form.locator("input[name=reason]").fill("Posting spam links repeatedly");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, studentName).locator(".status", { hasText: "Suspended" }).waitFor();
+  check(
+    "member suspended",
+    psql(`select suspended_at is not null from public.profiles where id = '${student.id}'`) === "t",
+  );
+  const sp = await pageFor(student);
+  await sp.page.goto(`${APP}/account`, { waitUntil: "networkidle" });
+  check(
+    "suspended member sees the notice on /account",
+    (await sp.page.textContent("main"))?.includes("Your account is suspended"),
+  );
+  await sp.ctx.close();
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, studentName, "Lift suspension");
+  await form.locator("input[name=reason]").fill("Appeal accepted by the team");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, studentName).locator("summary", { hasText: "Suspend" }).waitFor();
+  check(
+    "suspension lifted",
+    psql(`select suspended_at is null from public.profiles where id = '${student.id}'`) === "t",
+  );
+  await p.goto(`${APP}/admin/users?role=admin`, { waitUntil: "networkidle" });
+  check(
+    "admin rows offer no suspend or delete",
+    (await p.locator("li.my-item").count()) > 0 &&
+      (await p.locator("li.my-item summary:has-text('Suspend')").count()) === 0 &&
+      (await p.locator("li.my-item summary:has-text('Delete account')").count()) === 0,
+  );
+
+  const postId = submitAs(student.id, { role: `E2E Fix Role ${tag}` });
+  psqlAs(mod.id, `select public.moderate_experience('${postId}', 'approve');`);
+  await p.goto(`${APP}/admin/posts/${postId}`, { waitUntil: "networkidle" });
+  const qs = p.locator("details", { has: p.locator("summary:has-text('Fix question 1')") });
+  await qs.locator("summary").click();
+  const qf = qs.locator("form");
+  await qf.locator("textarea[name=value]").fill("Explain hashing, wording fixed by admin");
+  await qf.locator("input[name=reason]").fill("Interviewer name removed from text");
+  await qf.locator("button[type=submit]").click();
+  await qf.locator(".form__ok").waitFor();
+  check(
+    "question text fixed on a published post",
+    psql(
+      `select q.body from public.questions q join public.rounds r on r.id = q.round_id where r.experience_id = '${postId}'`,
+    ) === "Explain hashing, wording fixed by admin" &&
+      psql(`select status from public.experiences where id = '${postId}'`) === "approved",
+  );
+  const pub = await (await fetch(`${APP}/experiences/${postId}`)).text();
+  check("public page shows the fix", pub.includes("wording fixed by admin"));
+  const del = p.locator("section[aria-labelledby=delete-post] details");
+  await del.locator("summary").click();
+  const delf = del.locator("form");
+  await delf.locator("input[name=confirm_text]").fill("delete");
+  await delf.locator("input[name=reason]").fill("NDA breach, must be erased");
+  await delf.locator("button[type=submit]").click();
+  await delf.locator(".form__error").waitFor();
+  check(
+    "delete needs DELETE typed",
+    (await delf.locator(".form__error").textContent())?.includes("Type DELETE"),
+  );
+  await delf.locator("input[name=confirm_text]").fill("DELETE");
+  await delf.locator("button[type=submit]").click();
+  await p.waitForURL(`${APP}/admin/posts?deleted=1`);
+  check(
+    "post deleted permanently",
+    psql(`select count(*) from public.experiences where id = '${postId}'`) === "0",
+  );
+
   // ---------- Reference data: companies, topics, departments, batches ----------
   const dupName = `E2E Dup Co ${tag}`;
   await p.goto(`${APP}/admin/companies`, { waitUntil: "networkidle" });
@@ -521,6 +597,9 @@ try {
       "Topic list changed",
       "Site setting changed",
       "Departments or batches changed",
+      "Member account changed",
+      "Post text fixed",
+      "Post deleted permanently",
       "Audit log viewed",
     ].every((t) => log.includes(t)),
   );
@@ -544,6 +623,7 @@ try {
     "/admin/topics",
     "/admin/settings",
     "/admin/reference",
+    "/admin/posts",
     "/admin/audit",
   ]) {
     await m.page.goto(`${APP}${path}`, { waitUntil: "networkidle" });

@@ -33,6 +33,7 @@ export function communityErrorMessage(raw: string, what: "comment" | "report" | 
       ? "You cannot vote on your own experience."
       : "You cannot report your own post or comment.";
   }
+  if (raw.includes("suspended")) return "Your account is suspended. You can still read everything.";
   if (raw.includes("comments_paused")) return "Comments are paused by the site team for now.";
   if (raw.includes("not_found")) return "This is no longer available. Reload the page.";
   if (raw.includes("invalid_input")) {

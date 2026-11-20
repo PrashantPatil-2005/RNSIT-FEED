@@ -705,6 +705,7 @@ export type Database = {
           id: string;
           onboarded_at: string | null;
           role: Database["public"]["Enums"]["user_role"];
+          suspended_at: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -717,6 +718,7 @@ export type Database = {
           id: string;
           onboarded_at?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
+          suspended_at?: string | null;
         };
         Update: {
           batch_id?: number | null;
@@ -728,6 +730,7 @@ export type Database = {
           id?: string;
           onboarded_at?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
+          suspended_at?: string | null;
         };
         Relationships: [
           {
@@ -2009,7 +2012,18 @@ export type Database = {
       };
       admin_delete_batch: { Args: { p_batch: number; p_reason: string }; Returns: undefined };
       admin_delete_company: { Args: { p_company: string; p_reason: string }; Returns: undefined };
+      admin_delete_post: { Args: { p_experience: string; p_reason: string }; Returns: undefined };
       admin_delete_topic: { Args: { p_reason: string; p_topic: number }; Returns: undefined };
+      admin_edit_post: {
+        Args: {
+          p_experience: string;
+          p_field: string;
+          p_reason: string;
+          p_target: string;
+          p_value: string;
+        };
+        Returns: undefined;
+      };
       admin_get_usn: { Args: { p_reason: string; p_user: string }; Returns: string };
       admin_invite_alumnus: { Args: { p_email: string; p_reason: string }; Returns: string };
       admin_list_alumni_invites: {
@@ -2071,6 +2085,7 @@ export type Database = {
         }[];
       };
       admin_owner_id: { Args: Record<PropertyKey, never>; Returns: string };
+      admin_post_detail: { Args: { p_experience: string }; Returns: Json };
       admin_reference_usage: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -2083,6 +2098,14 @@ export type Database = {
         Args: { p_alias: string; p_company: string; p_reason: string };
         Returns: undefined;
       };
+      admin_remove_user_comments: {
+        Args: {
+          p_reason: string;
+          p_reason_code: Database["public"]["Enums"]["reason_code"];
+          p_user: string;
+        };
+        Returns: number;
+      };
       admin_rename_company: {
         Args: { p_company: string; p_name: string; p_reason: string };
         Returns: undefined;
@@ -2091,14 +2114,26 @@ export type Database = {
         Args: { p_name: string; p_reason: string; p_topic: number };
         Returns: undefined;
       };
+      admin_request_user_deletion: {
+        Args: { p_reason: string; p_user: string };
+        Returns: undefined;
+      };
       admin_reveal_author: { Args: { p_experience: string; p_reason: string }; Returns: Json };
       admin_revoke_alumni_invite: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_set_setting: {
         Args: { p_key: string; p_reason: string; p_value: string };
         Returns: undefined;
       };
+      admin_set_suspended: {
+        Args: { p_reason: string; p_suspended: boolean; p_user: string };
+        Returns: undefined;
+      };
       admin_set_topic_active: {
         Args: { p_active: boolean; p_reason: string; p_topic: number };
+        Returns: undefined;
+      };
+      admin_set_user_details: {
+        Args: { p_batch: number; p_department: number; p_reason: string; p_user: string };
         Returns: undefined;
       };
       admin_set_user_role: {
@@ -2295,7 +2330,10 @@ export type Database = {
         | "manage_topic"
         | "owner_auto_admin"
         | "change_setting"
-        | "manage_reference";
+        | "manage_reference"
+        | "manage_user"
+        | "edit_post"
+        | "delete_post";
       campus_type: "on_campus" | "off_campus";
       comment_status: "visible" | "removed";
       exp_status:
@@ -2466,6 +2504,9 @@ export const Constants = {
         "owner_auto_admin",
         "change_setting",
         "manage_reference",
+        "manage_user",
+        "edit_post",
+        "delete_post",
       ],
       campus_type: ["on_campus", "off_campus"],
       comment_status: ["visible", "removed"],

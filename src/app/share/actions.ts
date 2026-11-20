@@ -26,6 +26,7 @@ export type SaveErrorCode =
   | "not_found"
   | "draft_limit"
   | "invalid"
+  | "suspended"
   | "failed";
 
 function versionOf(v: unknown): number | null {
@@ -48,6 +49,7 @@ function mapError(message: string): SaveErrorCode {
   if (message.includes("limit_reached")) return "draft_limit";
   if (message.includes("invalid_input")) return "invalid";
   if (message.includes("onboarding_required")) return "not_onboarded";
+  if (message.includes("suspended")) return "suspended";
   return "failed";
 }
 

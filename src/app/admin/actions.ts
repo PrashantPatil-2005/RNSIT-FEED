@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type { ActionState } from "@/components/ui/ActionForm";
 import { adminErrorMessage, auditActionLabels, isRole, roleLabels } from "@/lib/admin/labels";
 import { getViewer, type Viewer } from "@/lib/auth/session";
@@ -566,4 +567,150 @@ export async function deleteBatchAction(_p: ActionState, data: FormData): Promis
     "Batch deleted.",
     ["/"],
   );
+}
+
+// ---------- Users, comments and posts (migration 030) ----------
+
+const REASON_CODES = [
+  "nda",
+  "personal_info",
+  "defamation",
+  "low_quality",
+  "duplicate",
+  "other",
+] as const;
+type ReasonCode = (typeof REASON_CODES)[number];
+const isReasonCode = (v: string): v is ReasonCode =>
+  (REASON_CODES as readonly string[]).includes(v);
+
+export async function setSuspendedAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const user = text(data, "user", 40);
+  const suspend = text(data, "suspend", 5) === "true";
+  const reason = text(data, "reason");
+  if (!isUuid(user)) return { error: "Invalid request." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () => v.db.rpc("admin_set_suspended", { p_user: user, p_suspended: suspend, p_reason: reason }),
+    suspend
+      ? "Suspended. They can read but cannot post, comment, vote or report."
+      : "Suspension lifted.",
+  );
+}
+
+export async function setUserDetailsAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const user = text(data, "user", 40);
+  const department = smallId(data, "department");
+  const batch = smallId(data, "batch");
+  const reason = text(data, "reason");
+  if (!isUuid(user) || !department || !batch) return { error: "Choose a department and batch." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () =>
+      v.db.rpc("admin_set_user_details", {
+        p_user: user,
+        p_department: department,
+        p_batch: batch,
+        p_reason: reason,
+      }),
+    "Department and batch saved.",
+  );
+}
+
+export async function forceDeleteUserAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const user = text(data, "user", 40);
+  const reason = text(data, "reason");
+  if (!isUuid(user)) return { error: "Invalid request." };
+  if (text(data, "confirm_text", 10) !== "DELETE")
+    return { error: "Type DELETE in capitals to confirm." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  return referenceCall(
+    () => v.db.rpc("admin_request_user_deletion", { p_user: user, p_reason: reason }),
+    "Account locked. The daily clean-up deletes it and all its posts and comments.",
+  );
+}
+
+export async function removeUserCommentsAction(
+  _p: ActionState,
+  data: FormData,
+): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const user = text(data, "user", 40);
+  const code = text(data, "reason_code", 20);
+  const reason = text(data, "reason");
+  if (!isUuid(user)) return { error: "Invalid request." };
+  if (!isReasonCode(code)) return { error: "Choose a reason." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { data: n, error } = await v.db.rpc("admin_remove_user_comments", {
+    p_user: user,
+    p_reason_code: code,
+    p_reason: reason,
+  });
+  if (error) return { error: adminErrorMessage(error.message) };
+  revalidatePath("/", "layout");
+  return { ok: `${n ?? 0} ${n === 1 ? "comment" : "comments"} removed.` };
+}
+
+const POST_FIELDS = [
+  "role_title",
+  "prep_tips",
+  "round_notes",
+  "round_platform",
+  "question",
+  "remove_resource",
+] as const;
+type PostField = (typeof POST_FIELDS)[number];
+const isPostField = (v: string): v is PostField => (POST_FIELDS as readonly string[]).includes(v);
+
+export async function editPostAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const post = text(data, "post", 40);
+  const field = text(data, "field", 30);
+  const target = text(data, "target", 40);
+  const value = String(data.get("value") ?? "").slice(0, 5000);
+  const reason = text(data, "reason");
+  if (!isUuid(post) || !isPostField(field)) return { error: "Invalid request." };
+  if (target && !isUuid(target)) return { error: "Invalid request." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { error } = await v.db.rpc("admin_edit_post", {
+    p_experience: post,
+    p_field: field,
+    // No round, question or link for title and tips fixes: the database takes null.
+    p_target: (target || null) as unknown as string,
+    p_value: value,
+    p_reason: reason,
+  });
+  if (error) return { error: adminErrorMessage(error.message) };
+  revalidatePath("/", "layout");
+  return {
+    ok: field === "remove_resource" ? "Link removed." : "Saved. The public page shows the fix.",
+  };
+}
+
+export async function deletePostAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const post = text(data, "post", 40);
+  const reason = text(data, "reason");
+  if (!isUuid(post)) return { error: "Invalid request." };
+  if (text(data, "confirm_text", 10) !== "DELETE")
+    return { error: "Type DELETE in capitals to confirm." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { error } = await v.db.rpc("admin_delete_post", { p_experience: post, p_reason: reason });
+  if (error) return { error: adminErrorMessage(error.message) };
+  revalidatePath("/", "layout");
+  redirect("/admin/posts?deleted=1");
 }

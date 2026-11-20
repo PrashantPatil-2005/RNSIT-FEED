@@ -8,7 +8,15 @@ import Link from "next/link";
 import { isRole, ROLES, roleLabels, rolePlurals } from "@/lib/admin/labels";
 import { requireAdmin } from "@/lib/auth/staff";
 import { getReferenceData } from "@/lib/data/queries";
-import { correctNameAction, setRoleAction } from "../actions";
+import { REASON_CODES, reasonLabels } from "@/lib/moderation/labels";
+import {
+  correctNameAction,
+  forceDeleteUserAction,
+  removeUserCommentsAction,
+  setRoleAction,
+  setSuspendedAction,
+  setUserDetailsAction,
+} from "../actions";
 
 export const metadata: Metadata = { title: "Users and roles · Admin", robots: { index: false } };
 
@@ -40,7 +48,7 @@ export default async function AdminUsersPage({
   let query = viewer.db
     .from("profiles")
     .select(
-      "id, full_name, role, department_id, batch_id, onboarded_at, created_at, deletion_requested_at",
+      "id, full_name, role, department_id, batch_id, onboarded_at, created_at, deletion_requested_at, suspended_at",
     )
     .order("created_at", { ascending: false })
     .limit(LIMIT);
@@ -182,6 +190,9 @@ export default async function AdminUsersPage({
                           <Link href={keep({ history: p.id })}>Role history</Link>
                           {p.onboarded_at ? null : <span>Setup not finished</span>}
                           {p.deletion_requested_at ? <span>Deletion requested</span> : null}
+                          {p.suspended_at ? (
+                            <span className="status status--rejected">Suspended</span>
+                          ) : null}
                         </p>
                       </div>
                       {self || p.deletion_requested_at ? null : (
@@ -254,6 +265,123 @@ export default async function AdminUsersPage({
                               />
                             </ActionForm>
                           </details>
+                          {p.onboarded_at && !(isOwner && !viewerIsOwner) ? (
+                            <details className="admin-details">
+                              <summary>Fix department or batch</summary>
+                              <ActionForm
+                                action={setUserDetailsAction}
+                                submitLabel="Save"
+                                label={`Fix department or batch for ${p.full_name}`}
+                              >
+                                <input type="hidden" name="user" value={p.id} />
+                                <div className="field">
+                                  <label htmlFor={`dept-${p.id}`}>Department</label>
+                                  <select
+                                    id={`dept-${p.id}`}
+                                    name="department"
+                                    defaultValue={p.department_id ?? ""}
+                                  >
+                                    {ref.departments.map((d) => (
+                                      <option key={d.id} value={d.id}>
+                                        {d.code} · {d.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="field">
+                                  <label htmlFor={`batch-${p.id}`}>Batch</label>
+                                  <select
+                                    id={`batch-${p.id}`}
+                                    name="batch"
+                                    defaultValue={p.batch_id ?? ""}
+                                  >
+                                    {ref.batches.map((b) => (
+                                      <option key={b.id} value={b.id}>
+                                        {b.year}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <ReasonField id={`details-reason-${p.id}`} />
+                              </ActionForm>
+                            </details>
+                          ) : null}
+                          <details className="admin-details">
+                            <summary>Remove all their comments</summary>
+                            <ActionForm
+                              action={removeUserCommentsAction}
+                              submitLabel="Remove comments"
+                              label={`Remove all comments by ${p.full_name}`}
+                              danger
+                            >
+                              <input type="hidden" name="user" value={p.id} />
+                              <div className="field">
+                                <label htmlFor={`rc-code-${p.id}`}>Reason</label>
+                                <select id={`rc-code-${p.id}`} name="reason_code" defaultValue="">
+                                  <option value="" disabled>
+                                    Choose…
+                                  </option>
+                                  {REASON_CODES.map((c) => (
+                                    <option key={c} value={c}>
+                                      {reasonLabels[c]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <ReasonField id={`rc-reason-${p.id}`} />
+                            </ActionForm>
+                          </details>
+                          {p.role === "admin" || isOwner ? null : (
+                            <>
+                              <details className="admin-details">
+                                <summary>{p.suspended_at ? "Lift suspension" : "Suspend"}</summary>
+                                <ActionForm
+                                  action={setSuspendedAction}
+                                  submitLabel={p.suspended_at ? "Lift suspension" : "Suspend"}
+                                  label={`${p.suspended_at ? "Lift suspension for" : "Suspend"} ${p.full_name}`}
+                                  danger={!p.suspended_at}
+                                >
+                                  <input type="hidden" name="user" value={p.id} />
+                                  <input
+                                    type="hidden"
+                                    name="suspend"
+                                    value={p.suspended_at ? "false" : "true"}
+                                  />
+                                  <ReasonField
+                                    id={`suspend-reason-${p.id}`}
+                                    hint="A suspended member can still read but cannot post, comment, vote or report. Their posts stay up."
+                                  />
+                                </ActionForm>
+                              </details>
+                              <details className="admin-details">
+                                <summary>Delete account</summary>
+                                <ActionForm
+                                  action={forceDeleteUserAction}
+                                  submitLabel="Delete account"
+                                  label={`Delete the account of ${p.full_name}`}
+                                  danger
+                                >
+                                  <input type="hidden" name="user" value={p.id} />
+                                  <div className="field">
+                                    <label htmlFor={`del-confirm-${p.id}`}>
+                                      Type DELETE to confirm
+                                    </label>
+                                    <input
+                                      id={`del-confirm-${p.id}`}
+                                      name="confirm_text"
+                                      type="text"
+                                      required
+                                      autoComplete="off"
+                                    />
+                                  </div>
+                                  <ReasonField
+                                    id={`del-reason-${p.id}`}
+                                    hint="The account is locked now; the daily clean-up deletes it with all its posts, comments and votes. This cannot be undone."
+                                  />
+                                </ActionForm>
+                              </details>
+                            </>
+                          )}
                         </div>
                       )}
                     </li>

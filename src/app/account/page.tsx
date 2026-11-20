@@ -53,6 +53,14 @@ export default async function AccountPage({
               </p>
             </Notice>
           ) : null}
+          {profile.suspended ? (
+            <Notice title="Your account is suspended">
+              <p>
+                The site team has suspended this account. You can still read everything, but you
+                cannot post, comment, vote or report. Your published posts stay up.
+              </p>
+            </Notice>
+          ) : null}
           {profile.deletionRequested ? (
             <Notice title="Account deletion requested">
               <p>

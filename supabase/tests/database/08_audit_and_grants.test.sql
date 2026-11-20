@@ -112,6 +112,8 @@ begin
       'admin_rename_company', 'admin_remove_company_alias', 'admin_merge_companies', 'admin_delete_company',
       'admin_set_topic_active', 'admin_delete_topic', 'admin_create_department', 'admin_update_department',
       'admin_create_batch', 'admin_delete_batch', 'admin_reference_usage',
+      'admin_set_suspended', 'admin_set_user_details', 'admin_request_user_deletion',
+      'admin_remove_user_comments', 'admin_edit_post', 'admin_delete_post', 'admin_post_detail',
       'admin_usn_case_take', 'admin_usn_case_notify', 'admin_usn_case_approve',
       'admin_usn_case_deny', 'admin_usn_case_execute',
       'cancel_submission', 'set_helpful_vote', 'add_comment', 'delete_my_comment', 'report_comment',
