@@ -46,13 +46,19 @@ export default async function AdminUsersPage({
     .limit(LIMIT);
   if (q) query = query.ilike("full_name", `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
   if (role) query = query.eq("role", role);
-  const [{ data: people, error }, ref, history] = await Promise.all([
+  const [{ data: people, error }, ref, history, owner] = await Promise.all([
     query,
     getReferenceData(viewer.db),
     historyFor
       ? viewer.db.rpc("admin_user_role_history", { p_user: historyFor })
       : Promise.resolve(null),
+    viewer.db.rpc("admin_owner_id"),
   ]);
+  // Owner rules (migration 024): the owner's role is fixed and only the owner manages admins.
+  // Display only; the database enforces both.
+  const ownerId = owner.data ?? null;
+  const viewerIsOwner = ownerId !== null && ownerId === viewer.user.id;
+  const canManageAdmins = ownerId === null || viewerIsOwner;
   const historyName = historyFor ? people?.find((x) => x.id === historyFor)?.full_name : undefined;
 
   const dept = (id: number | null) => ref.departments.find((d) => d.id === id)?.code ?? "—";
@@ -155,11 +161,15 @@ export default async function AdminUsersPage({
               <ul className="my-list list-reset" aria-label="Users">
                 {people.map((p) => {
                   const self = p.id === viewer.user.id;
+                  const isOwner = p.id === ownerId;
+                  const roleLocked = isOwner || (p.role === "admin" && !canManageAdmins);
+                  const roleChoices = canManageAdmins ? ROLES : ROLES.filter((r) => r !== "admin");
                   return (
                     <li key={p.id} className="my-item admin-user">
                       <div>
                         <p className="my-item__title">
                           {p.full_name} {self ? <span className="muted">(you)</span> : null}
+                          {isOwner ? <span className="status status--owner">Owner</span> : null}
                         </p>
                         <p className="my-item__meta">
                           <span className={`status status--role-${p.role}`}>
@@ -176,39 +186,49 @@ export default async function AdminUsersPage({
                       </div>
                       {self || p.deletion_requested_at ? null : (
                         <div className="admin-user__actions">
-                          <details className="admin-details">
-                            <summary>Change role</summary>
-                            <ActionForm
-                              action={setRoleAction}
-                              submitLabel="Change role"
-                              label={`Change role for ${p.full_name}`}
-                            >
-                              <input type="hidden" name="user" value={p.id} />
-                              <div className="field">
-                                <label htmlFor={`role-${p.id}`}>New role</label>
-                                <select id={`role-${p.id}`} name="role" defaultValue={p.role}>
-                                  {ROLES.map((r) => (
-                                    <option key={r} value={r}>
-                                      {roleLabels[r]}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="check">
-                                <input
-                                  id={`confirm-admin-${p.id}`}
-                                  name="confirm_admin"
-                                  type="checkbox"
-                                  value="yes"
-                                />
-                                <label htmlFor={`confirm-admin-${p.id}`}>
-                                  Only if choosing Admin: I confirm. Admins manage roles, read the
-                                  audit log and can reveal anonymous authors. At most two.
-                                </label>
-                              </div>
-                              <ReasonField id={`role-reason-${p.id}`} />
-                            </ActionForm>
-                          </details>
+                          {roleLocked ? (
+                            <p className="muted">
+                              {isOwner
+                                ? "The owner's role cannot be changed."
+                                : "Only the owner can change an admin's role."}
+                            </p>
+                          ) : (
+                            <details className="admin-details">
+                              <summary>Change role</summary>
+                              <ActionForm
+                                action={setRoleAction}
+                                submitLabel="Change role"
+                                label={`Change role for ${p.full_name}`}
+                              >
+                                <input type="hidden" name="user" value={p.id} />
+                                <div className="field">
+                                  <label htmlFor={`role-${p.id}`}>New role</label>
+                                  <select id={`role-${p.id}`} name="role" defaultValue={p.role}>
+                                    {roleChoices.map((r) => (
+                                      <option key={r} value={r}>
+                                        {roleLabels[r]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                {canManageAdmins ? (
+                                  <div className="check">
+                                    <input
+                                      id={`confirm-admin-${p.id}`}
+                                      name="confirm_admin"
+                                      type="checkbox"
+                                      value="yes"
+                                    />
+                                    <label htmlFor={`confirm-admin-${p.id}`}>
+                                      Only if choosing Admin: I confirm. Admins manage roles, read
+                                      the audit log and can reveal anonymous authors. At most two.
+                                    </label>
+                                  </div>
+                                ) : null}
+                                <ReasonField id={`role-reason-${p.id}`} />
+                              </ActionForm>
+                            </details>
+                          )}
                           <details className="admin-details">
                             <summary>Correct name</summary>
                             <ActionForm

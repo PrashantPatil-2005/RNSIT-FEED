@@ -27,6 +27,7 @@ const browser = await chromium.launch({ channel: "msedge", headless: true });
 const users = [];
 const tag = Date.now().toString(36);
 const companyName = `E2E Admin Co ${tag}`;
+const topicName = `E2E Topic ${tag}`;
 const role = (id) => psql(`select role from public.profiles where id = '${id}'`);
 
 async function pageFor(user, viewport = { width: 1280, height: 900 }) {
@@ -307,6 +308,36 @@ try {
     ),
   );
 
+  // ---------- Topics ----------
+  await p.goto(`${APP}/admin/topics`, { waitUntil: "networkidle" });
+  const tf = p.getByRole("form", { name: "Add a topic" });
+  await tf.locator("input[name=name]").fill(topicName);
+  await tf.locator("input[name=reason]").fill("New interview area seen this season");
+  await tf.locator("button[type=submit]").click();
+  await tf.locator(".form__ok").waitFor();
+  await waitForFormReset(tf, "input[name=name]");
+  const topicSlug = psql(`select slug from public.topics where name = '${topicName}'`);
+  check("topic created with a generated code", topicSlug === `e2e-topic-${tag}`, topicSlug);
+  await tf.locator("input[name=name]").fill(topicName.toLowerCase());
+  await tf.locator("input[name=reason]").fill("Adding the same topic again");
+  await tf.locator("button[type=submit]").click();
+  await tf.locator(".form__error").waitFor();
+  check(
+    "duplicate topic name refused (case-insensitive)",
+    (await tf.locator(".form__error").textContent())?.includes("already exists"),
+  );
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, topicName, "Rename");
+  await form.locator("input[name=name]").fill(`${topicName} Renamed`);
+  await form.locator("input[name=reason]").fill("Clearer name for members");
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__ok").waitFor();
+  check(
+    "topic renamed, code unchanged",
+    psql(`select name || '|' || slug from public.topics where slug = '${topicSlug}'`) ===
+      `${topicName} Renamed|${topicSlug}`,
+  );
+
   // ---------- Audit log ----------
   await p.goto(`${APP}/admin/audit`, { waitUntil: "networkidle" });
   check(
@@ -325,6 +356,7 @@ try {
       "Alumnus invited",
       "Alumni invite revoked",
       "Company list changed",
+      "Topic list changed",
       "Audit log viewed",
     ].every((t) => log.includes(t)),
   );
@@ -345,6 +377,7 @@ try {
     "/admin/users",
     "/admin/invites",
     "/admin/companies",
+    "/admin/topics",
     "/admin/audit",
   ]) {
     await m.page.goto(`${APP}${path}`, { waitUntil: "networkidle" });
@@ -358,6 +391,7 @@ try {
   await browser.close();
   try {
     psql(`delete from public.companies where name = '${companyName}'`);
+    psql(`delete from public.topics where name like 'E2E Topic ${tag}%'`);
   } catch (e) {
     console.error(`company cleanup failed: ${e.message}`);
   }

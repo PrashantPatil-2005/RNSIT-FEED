@@ -171,6 +171,48 @@ export async function addAliasAction(_prev: ActionState, data: FormData): Promis
   return { ok: `Alias "${alias}" added.` };
 }
 
+export async function createTopicAction(_prev: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const name = text(data, "name", 200);
+  const slug = slugify(text(data, "slug", 200) || name).slice(0, 40);
+  const reason = text(data, "reason");
+  if (name.length < 2 || name.length > 80) return { error: "Enter a name of 2 to 80 characters." };
+  if (!/^[a-z0-9-]{2,40}$/.test(slug))
+    return { error: "Enter a short code using a–z, 0–9 and - (2 to 40 characters)." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { error } = await v.db.rpc("admin_create_topic", {
+    p_name: name,
+    p_slug: slug,
+    p_reason: reason,
+  });
+  if (error) return { error: adminErrorMessage(error.message) };
+  revalidatePath("/admin", "layout");
+  revalidatePath("/share");
+  return { ok: `Added topic ${name}.` };
+}
+
+export async function renameTopicAction(_prev: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const topic = Number(text(data, "topic", 10));
+  const name = text(data, "name", 200);
+  const reason = text(data, "reason");
+  if (!Number.isInteger(topic) || topic < 1 || topic > 32767) return { error: "Invalid request." };
+  if (name.length < 2 || name.length > 80) return { error: "Enter a name of 2 to 80 characters." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { error } = await v.db.rpc("admin_rename_topic", {
+    p_topic: topic,
+    p_name: name,
+    p_reason: reason,
+  });
+  if (error) return { error: adminErrorMessage(error.message) };
+  revalidatePath("/", "layout");
+  return { ok: `Renamed to ${name}.` };
+}
+
 export interface AuditRow {
   id: number;
   action: string;

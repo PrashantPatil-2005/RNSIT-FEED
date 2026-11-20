@@ -2047,10 +2047,15 @@ a.btn-link {
   background: var(--color-success-soft);
 }
 .status--role-moderator,
-.status--role-admin {
+.status--role-admin,
+.status--owner {
   background: var(--color-accent-soft);
   border-color: var(--color-accent-soft-border);
   color: var(--color-accent);
+}
+.status--owner {
+  margin-left: var(--space-2);
+  font-weight: 600;
 }
 .status--invite-revoked,
 .status--invite-expired {

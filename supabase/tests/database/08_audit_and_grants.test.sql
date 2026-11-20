@@ -106,7 +106,7 @@ begin
       'mark_notice_read', 'request_account_deletion', 'request_usn_review', 'object_to_usn_release',
       'moderate_experience', 'resolve_report', 'moderation_experience_detail',
       'admin_set_user_role', 'admin_correct_name', 'admin_reveal_author', 'admin_get_usn',
-      'admin_create_company', 'admin_add_company_alias', 'admin_list_audit',
+      'admin_create_company', 'admin_add_company_alias', 'admin_create_topic', 'admin_rename_topic', 'admin_owner_id', 'admin_list_audit',
       'admin_usn_case_take', 'admin_usn_case_notify', 'admin_usn_case_approve',
       'admin_usn_case_deny', 'admin_usn_case_execute',
       'cancel_submission', 'set_helpful_vote', 'add_comment', 'delete_my_comment', 'report_comment',
