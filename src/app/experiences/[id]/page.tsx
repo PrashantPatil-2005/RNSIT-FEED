@@ -58,7 +58,16 @@ async function participation(id: string): Promise<Participation> {
   };
 }
 
-type Props = { params: Promise<{ id: string }> };
+const INTENTS = ["helpful", "comment", "report"] as const;
+type Intent = (typeof INTENTS)[number];
+function parseIntent(raw: string | undefined): Intent | null {
+  return INTENTS.find((i) => i === raw) ?? null;
+}
+
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ intent?: string | string[] }>;
+};
 
 // One fetch per request, shared by generateMetadata and the page.
 const load = cache(async (id: string) => {
@@ -77,24 +86,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ExperienceDetailPage({ params }: Props) {
+export default async function ExperienceDetailPage({ params, searchParams }: Props) {
   const r = await load((await params).id);
+  const intentRaw = (await searchParams).intent;
+  // Set when a visitor chose an action and came back after signing in. Nothing is ever done
+  // automatically (a crafted link must not vote or report for someone): the control is focused
+  // or opened and the member confirms it.
+  const intent = parseIntent(Array.isArray(intentRaw) ? intentRaw[0] : intentRaw);
   if (!r.configured) return <NotConfigured />;
   const exp = r.exp;
   if (!exp) notFound();
   const who = await participation(exp.id);
-  const signInHref = `/sign-in?next=${encodeURIComponent(`/experiences/${exp.id}`)}`;
-  const joinPrompt =
-    who.kind === "visitor" ? (
-      <p className="signin-note">
-        <Link href={signInHref}>Sign in with your RNSIT Google account</Link> to vote, comment or
-        report.
-      </p>
-    ) : who.kind === "setup" ? (
-      <p className="signin-note">
-        <Link href="/onboarding">Finish setting up your account</Link> to vote, comment or report.
-      </p>
-    ) : null;
+  const here = `/experiences/${exp.id}`;
+  // Visitors go through sign-in, half-set-up members through onboarding; both come back here.
+  const intentHref = (i: Intent) => {
+    const next = encodeURIComponent(`${here}?intent=${i}`);
+    return who.kind === "setup" ? `/onboarding?next=${next}` : `/sign-in?next=${next}`;
+  };
+  const canJoin = who.kind === "visitor" || who.kind === "setup";
+  const joinHint =
+    who.kind === "visitor"
+      ? "Sign in with your RNSIT Google account. You come straight back here."
+      : "Finish your one-time account setup. You come straight back here.";
+  const joinButton = (i: Intent, label: string) => (
+    <div className="signin-note stack--sm">
+      <Link href={intentHref(i)} className="btn btn--small btn--secondary">
+        {label}
+      </Link>
+      <p>{joinHint}</p>
+    </div>
+  );
 
   const eligibility = [
     exp.minCgpa !== null ? `Minimum CGPA ${exp.minCgpa}` : null,
@@ -232,6 +253,7 @@ export default async function ExperienceDetailPage({ params }: Props) {
                       id="comment-body"
                       name="body"
                       rows={3}
+                      autoFocus={intent === "comment"}
                       required
                       minLength={COMMENT_MIN}
                       maxLength={COMMENT_MAX}
@@ -244,9 +266,9 @@ export default async function ExperienceDetailPage({ params }: Props) {
                     </p>
                   </div>
                 </ActionForm>
-              ) : (
-                joinPrompt
-              )}
+              ) : canJoin ? (
+                joinButton("comment", "Add a comment")
+              ) : null}
             </section>
           </div>
 
@@ -280,7 +302,12 @@ export default async function ExperienceDetailPage({ params }: Props) {
             <div className="panel">
               <h2 className="panel__title">Helpful?</h2>
               {who.kind === "member" && !who.isAuthor ? (
-                <HelpfulButton id={exp.id} count={exp.helpfulCount} voted={who.voted} />
+                <HelpfulButton
+                  id={exp.id}
+                  count={exp.helpfulCount}
+                  voted={who.voted}
+                  justSignedIn={intent === "helpful"}
+                />
               ) : (
                 <>
                   <p className="helpful-count">
@@ -292,9 +319,9 @@ export default async function ExperienceDetailPage({ params }: Props) {
                     <p className="field__hint">
                       This is your experience, so you cannot vote on it.
                     </p>
-                  ) : (
-                    joinPrompt
-                  )}
+                  ) : canJoin ? (
+                    joinButton("helpful", "Mark as helpful")
+                  ) : null}
                 </>
               )}
             </div>
@@ -305,7 +332,7 @@ export default async function ExperienceDetailPage({ params }: Props) {
                 {who.reportedPost ? (
                   <p>You reported this experience. Moderators will review it.</p>
                 ) : (
-                  <details className="comment__action">
+                  <details className="comment__action" open={intent === "report"}>
                     <summary>Report this experience</summary>
                     <ActionForm
                       action={reportExperienceAction}
@@ -317,6 +344,11 @@ export default async function ExperienceDetailPage({ params }: Props) {
                     </ActionForm>
                   </details>
                 )}
+              </div>
+            ) : canJoin ? (
+              <div className="panel">
+                <h2 className="panel__title">Something wrong?</h2>
+                {joinButton("report", "Report this experience")}
               </div>
             ) : null}
 

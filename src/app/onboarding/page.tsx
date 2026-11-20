@@ -17,10 +17,11 @@ export default async function OnboardingPage({
   searchParams: Promise<{ next?: string | string[] }>;
 }) {
   const viewer = await requireViewer("/onboarding");
-  if (viewer.profile?.onboarded) redirect("/account");
-  if (!viewer.profile) return <NotConfigured />;
   const raw = (await searchParams).next;
   const next = safeNextPath(Array.isArray(raw) ? raw[0] : raw);
+  // Already set up: carry on to where they were heading (e.g. the post they wanted to vote on).
+  if (viewer.profile?.onboarded) redirect(next === "/onboarding" ? "/account" : next);
+  if (!viewer.profile) return <NotConfigured />;
   const ref = await getReferenceData(viewer.db);
 
   return (

@@ -69,6 +69,24 @@ try {
       (await v.page.locator("#comment-body").count()) === 0 &&
       (await v.page.locator("summary:has-text('Report')").count()) === 0,
   );
+  for (const intent of ["helpful", "comment", "report"]) {
+    check(
+      `visitor: ${intent} button leads to sign-in and back to this post`,
+      (await v.page
+        .locator(
+          `a.btn[href="/sign-in?next=${encodeURIComponent(`/experiences/${named}?intent=${intent}`)}"]`,
+        )
+        .count()) === 1,
+    );
+  }
+  check(
+    "visitor: header Sign in returns to this page",
+    (await v.page
+      .locator(
+        `.header-actions a[href="/sign-in?next=${encodeURIComponent(`/experiences/${named}`)}"]`,
+      )
+      .count()) === 1,
+  );
 
   // ---------- Author ----------
   const a = await pageFor(author);
@@ -99,6 +117,27 @@ try {
   // ---------- Member: helpful vote ----------
   const m = await pageFor(member);
   const mp = m.page;
+  await mp.goto(`${namedUrl}?intent=helpful`, { waitUntil: "networkidle" });
+  check(
+    "member back from sign-in: vote button focused, not cast automatically",
+    (await mp
+      .locator("button[aria-pressed='false']")
+      .evaluate((b) => b === document.activeElement)) &&
+      (await main(mp)).includes("Select to confirm your vote"),
+  );
+  await mp.goto(`${namedUrl}?intent=comment`, { waitUntil: "networkidle" });
+  check(
+    "member back from sign-in: comment box focused",
+    await mp.locator("#comment-body").evaluate((t) => t === document.activeElement),
+  );
+  await mp.goto(`${namedUrl}?intent=report`, { waitUntil: "networkidle" });
+  check(
+    "member back from sign-in: report form open, nothing sent",
+    (await mp
+      .locator("details:has(summary:has-text('Report this experience'))")
+      .evaluate((d) => d.open)) &&
+      psql(`select count(*) from public.reports where experience_id = '${named}'`) === "0",
+  );
   await mp.goto(namedUrl, { waitUntil: "networkidle" });
   const vote = mp.locator("button[aria-pressed]");
   check(
