@@ -223,12 +223,19 @@ const projectId = /^project_id\s*=\s*"([^"]+)"/m.exec(
 )[1];
 const userId = randomUUID();
 {
-  const sql = `insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  // Switched and restored in one transaction (see asTestDomain in scripts/lib/local.mjs).
+  const sql = `begin;
+    create temp table _domain on commit drop as
+      select value from private.settings where key = 'allowed_email_domain';
+    update private.settings set value = 'example.test' where key = 'allowed_email_domain';
+    insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
       raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
       confirmation_token, recovery_token, email_change_token_new, email_change)
     values ('00000000-0000-0000-0000-000000000000', '${userId}', 'authenticated', 'authenticated', '${email}',
       extensions.crypt('${pw}', extensions.gen_salt('bf')), now(),
-      '{"provider":"email","providers":["email"]}', '{"full_name":"Synthetic Api Member"}', now(), now(), '', '', '', '');`;
+      '{"provider":"email","providers":["email"]}', '{"full_name":"Synthetic Api Member"}', now(), now(), '', '', '', '');
+    update private.settings set value = (select value from _domain) where key = 'allowed_email_domain';
+    commit;`;
   const r = spawnSync(
     "docker",
     [
