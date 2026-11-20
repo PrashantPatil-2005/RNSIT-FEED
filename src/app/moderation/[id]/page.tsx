@@ -36,6 +36,9 @@ interface ReviewJson {
   row_version: number;
   moderation_note: string | null;
   company_id: string;
+  company_name: string | null;
+  /** false: a new company typed by the author; it becomes public when this post is approved. */
+  company_listed: boolean | null;
   role_title: string | null;
   opportunity_type: OpportunityType | null;
   campus_type: CampusType | null;
@@ -102,7 +105,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   if (detail.error || !detail.data) notFound();
   const e = detail.data as unknown as ReviewJson;
 
-  const company = ref.companies.find((c) => c.id === e.company_id)?.name ?? "Unknown company";
+  const company = e.company_name ?? "Unknown company";
   const dept = ref.departments.find((d) => d.id === e.department_id);
   const batch = ref.batches.find((b) => b.id === e.batch_id);
   const topicSlug = (tid: number) => ref.topics.find((t) => t.id === tid)?.slug ?? `#${tid}`;
@@ -142,7 +145,15 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               {e.opportunity_type ? <Badge>{opportunityLabels[e.opportunity_type]}</Badge> : null}
               {e.campus_type ? <Badge>{campusLabels[e.campus_type]}</Badge> : null}
               {e.result ? <Badge>Result: {resultLabels[e.result]}</Badge> : null}
+              {e.company_listed === false ? <Badge>New company</Badge> : null}
             </div>
+            {e.company_listed === false && e.status === "pending" ? (
+              <p className="field__hint">
+                &ldquo;{company}&rdquo; is a new company typed by the author. Approving lists it
+                publicly. If it is misspelled or already listed under another name, return the post
+                and ask the author to use the listed name.
+              </p>
+            ) : null}
             <p className="byline">
               {e.is_anonymous ? (
                 <>

@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Companies · Admin", robots: { index
 export default async function AdminCompaniesPage() {
   const viewer = await requireAdmin("/admin/companies");
   const [companies, aliases, usage] = await Promise.all([
-    viewer.db.from("companies").select("id, name, slug").order("name").limit(1000),
+    viewer.db.from("companies").select("id, name, slug, listed").order("name").limit(1000),
     viewer.db.from("company_aliases").select("company_id, alias").order("alias").limit(5000),
     viewer.db.rpc("admin_reference_usage"),
   ]);
@@ -36,7 +36,7 @@ export default async function AdminCompaniesPage() {
       <PageHeader
         eyebrow="Admin"
         title="Companies"
-        description="Members choose from this list when posting. Aliases group other spellings under one company in search. Rename or merge instead of deleting: a company can be deleted only while no post uses it."
+        description="Members pick from this list or type a new name when posting; a new name stays unlisted (hidden) until a post using it is approved, and is removed automatically if no post uses it. Aliases group other spellings under one company in search. Rename or merge instead of deleting: a company can be deleted only while no post uses it."
       />
       <Container>
         <div className="section section--tight stack stack--lg">
@@ -97,7 +97,13 @@ export default async function AdminCompaniesPage() {
                     <li key={c.id} className="my-item">
                       <div>
                         <p className="my-item__title">
-                          <Link href={`/companies/${c.slug}`}>{c.name}</Link>
+                          {c.listed ? (
+                            <Link href={`/companies/${c.slug}`}>{c.name}</Link>
+                          ) : (
+                            <>
+                              {c.name} <span className="muted">(new, not listed yet)</span>
+                            </>
+                          )}
                         </p>
                         <p className="my-item__meta">
                           <span>/companies/{c.slug}</span>

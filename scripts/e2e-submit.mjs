@@ -140,7 +140,7 @@ try {
   const summary = (await p.textContent(".form__error[role=alert]")) ?? "";
   check(
     "submit lists missing fields",
-    summary.includes("Choose the company") &&
+    summary.includes("Enter the company name") &&
       summary.includes("post under your name or anonymously"),
   );
   check(
@@ -150,7 +150,7 @@ try {
   check("still a draft after a failed submit", dbStatus(id) === "draft");
 
   // Complete everything (anonymous) and submit
-  await p.selectOption("#companyId", { label: "Initech (demo)" });
+  await p.fill("#companyName", "Initech (demo)");
   await p.fill("#recruitmentYear", "2026");
   await p.check('input[name="opportunityType"][value="internship"]');
   await p.check('input[name="campusType"][value="on_campus"]');
@@ -188,7 +188,7 @@ try {
 
   // Duplicate submission: same company + role + year
   await p.goto(`${APP}/share`, { waitUntil: "networkidle" });
-  await p.selectOption("#companyId", { label: "Initech (demo)" });
+  await p.fill("#companyName", "Initech (demo)");
   await p.fill("#roleTitle", "e2e phase two role (TAB B)");
   await p.fill("#recruitmentYear", "2026");
   await p.check('input[name="opportunityType"][value="internship"]');

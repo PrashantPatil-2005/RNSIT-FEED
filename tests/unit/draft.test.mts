@@ -11,11 +11,9 @@ import {
   type DraftForm,
 } from "../../src/lib/experience/draft.ts";
 
-const UUID = "a0000000-0000-4000-8000-000000000001";
-
 function complete(): DraftForm {
   const f = emptyForm();
-  f.companyId = UUID;
+  f.companyName = "Infosys";
   f.roleTitle = "Software Engineer";
   f.opportunityType = "full_time";
   f.campusType = "on_campus";
@@ -34,7 +32,7 @@ function complete(): DraftForm {
 
 test("normalizeForm drops unknown keys and coerces hostile input", () => {
   const f = normalizeForm({
-    companyId: "not-a-uuid",
+    companyName: "y".repeat(500),
     roleTitle: "x".repeat(500),
     opportunityType: "admin",
     status: "approved",
@@ -48,7 +46,7 @@ test("normalizeForm drops unknown keys and coerces hostile input", () => {
     })),
     resources: [{ url: 42 }],
   });
-  assert.equal(f.companyId, "");
+  assert.equal(f.companyName.length, 120);
   assert.equal(f.roleTitle.length, 120);
   assert.equal(f.opportunityType, "");
   assert.equal(f.anonymity, "");
@@ -71,7 +69,7 @@ test("toPayload only sends whitelisted keys and keeps anonymity unset until chos
   assert.deepEqual(Object.keys(payload).sort(), [
     "backlogs_allowed",
     "campus_type",
-    "company_id",
+    "company_name",
     "eligible_department_ids",
     "is_anonymous",
     "min_cgpa",
@@ -149,7 +147,7 @@ test("validateForSubmit requires every mandatory field, including an explicit an
   assert.ok(validateForSubmit(h).length > 0);
   const e = validateForSubmit(emptyForm()).map((i) => i.field);
   for (const k of [
-    "companyId",
+    "companyName",
     "roleTitle",
     "opportunityType",
     "campusType",
@@ -163,7 +161,7 @@ test("validateForSubmit requires every mandatory field, including an explicit an
 
 test("fromExperienceJson round-trips through toPayload", () => {
   const json = {
-    company_id: UUID,
+    company_name: "Infosys",
     role_title: "SDE",
     opportunity_type: "both",
     campus_type: "off_campus",
@@ -191,10 +189,20 @@ test("fromExperienceJson round-trips through toPayload", () => {
   assert.equal(f.anonymity, "no");
   assert.equal(f.minCgpa, "7.5");
   const p = toPayload(f).payload;
+  assert.equal(p.company_name, "Infosys");
   assert.equal(p.recruitment_year, 2025);
   assert.equal(p.backlogs_allowed, 0);
   assert.equal(p.is_anonymous, false);
   assert.deepEqual(p.eligible_department_ids, [1, 2]);
   assert.equal((p.rounds as { difficulty: number }[])[0]!.difficulty, 2);
   assert.equal(fromExperienceJson({ is_anonymous: null }).anonymity, "");
+});
+
+test("company name is trimmed and whitespace-collapsed; blank means none", () => {
+  const f = emptyForm();
+  f.companyName = "  Zeta   Labs ";
+  assert.equal(toPayload(f).payload.company_name, "Zeta Labs");
+  f.companyName = "   ";
+  assert.equal(toPayload(f).payload.company_name, null);
+  assert.ok(validateForSubmit(f).some((i) => i.field === "companyName"));
 });

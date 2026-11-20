@@ -177,6 +177,7 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
+          listed: boolean;
           name: string;
           slug: string;
         };
@@ -184,12 +185,14 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: string;
+          listed?: boolean;
           name: string;
           slug: string;
         };
         Update: {
           created_at?: string;
           id?: string;
+          listed?: boolean;
           name?: string;
           slug?: string;
         };
@@ -440,6 +443,7 @@ export type Database = {
           batch_id: number;
           campus_type: Database["public"]["Enums"]["campus_type"] | null;
           company_id: string | null;
+          company_input: string | null;
           created_at: string;
           department_id: number;
           id: string;
@@ -466,6 +470,7 @@ export type Database = {
           batch_id: number;
           campus_type?: Database["public"]["Enums"]["campus_type"] | null;
           company_id?: string | null;
+          company_input?: string | null;
           created_at?: string;
           department_id: number;
           id?: string;
@@ -491,6 +496,7 @@ export type Database = {
           batch_id?: number;
           campus_type?: Database["public"]["Enums"]["campus_type"] | null;
           company_id?: string | null;
+          company_input?: string | null;
           created_at?: string;
           department_id?: number;
           id?: string;
@@ -1190,6 +1196,7 @@ export type Database = {
           batch_year: number;
           campus_type: Database["public"]["Enums"]["campus_type"] | null;
           company_name: string;
+          company_listed: boolean;
           decided_at: string | null;
           department_code: string;
           id: string;
@@ -1467,6 +1474,7 @@ export type Database = {
           approved_at: string | null;
           campus_type: Database["public"]["Enums"]["campus_type"] | null;
           company_id: string | null;
+          company_name: string | null;
           created_at: string;
           id: string;
           is_anonymous: boolean | null;
