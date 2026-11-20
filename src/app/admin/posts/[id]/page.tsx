@@ -7,7 +7,7 @@ import { ActionForm, ReasonField } from "@/components/ui/ActionForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireAdmin } from "@/lib/auth/staff";
 import { isUuid } from "@/lib/data/filters";
-import { deletePostAction, editPostAction } from "../../actions";
+import { deletePostAction, editPostAction, revealAuthorAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Fix a post · Admin", robots: { index: false } };
 
@@ -17,6 +17,7 @@ interface PostJson {
   role_title: string | null;
   prep_tips: string | null;
   company_name: string | null;
+  is_anonymous: boolean;
   rounds: {
     id: string;
     position: number;
@@ -208,6 +209,33 @@ export default async function AdminPostPage({ params }: { params: Promise<{ id: 
                   </ActionForm>
                 </details>
               ))}
+            </section>
+          ) : null}
+
+          {e.is_anonymous ? (
+            <section aria-labelledby="reveal-author" className="panel stack">
+              <h2 id="reveal-author" className="panel__title">
+                Anonymous author
+              </h2>
+              <p>
+                This post is anonymous. Reveal the author only when you must act on the account,
+                for example for repeated NDA breaks or abuse. The name is shown here once and is
+                not stored; your reason is kept in the audit log.
+              </p>
+              <details className="admin-details">
+                <summary>Reveal author</summary>
+                <ActionForm
+                  action={revealAuthorAction}
+                  submitLabel="Reveal author"
+                  label="Reveal the anonymous author"
+                >
+                  <input type="hidden" name="post" value={e.id} />
+                  <ReasonField
+                    id="reveal-reason"
+                    hint="Why you need the name, for example: third NDA report, checking the account. Kept in the audit log."
+                  />
+                </ActionForm>
+              </details>
             </section>
           ) : null}
 
