@@ -29,7 +29,6 @@ export interface NavItem {
 export const primaryNav: readonly NavItem[] = [
   { href: "/experiences", label: "Experiences" },
   { href: "/companies", label: "Companies" },
-  { href: "/search", label: "Search" },
   { href: "/share", label: "Share" },
 ];
 
