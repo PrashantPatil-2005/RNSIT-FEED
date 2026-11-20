@@ -385,9 +385,52 @@ try {
       (await p.locator("li.my-item summary:has-text('Delete account')").count()) === 0,
   );
 
-  const postId = submitAs(student.id, { role: `E2E Fix Role ${tag}` });
+  // ---------- USN lookup and anonymous-author reveal (C7) ----------
+  const audits = (action) =>
+    psql(
+      `select count(*) from private.admin_audit where action = '${action}' and actor_id = '${admin.id}'`,
+    );
+  const studentUsn = psql(`select usn from private.profile_private where user_id = '${student.id}'`);
+  await p.goto(`${APP}/admin/users?q=${encodeURIComponent(studentName)}`, {
+    waitUntil: "networkidle",
+  });
+  form = await openForm(p, studentName, "View USN");
+  await form.locator("input[name=reason]").fill("short");
+  check(
+    "USN lookup needs a real reason",
+    !(await form.evaluate((f) => f.checkValidity())) && audits("view_usn") === "0",
+  );
+  await form.locator("input[name=reason]").fill("Checking a duplicate account claim");
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__ok").waitFor();
+  check(
+    "admin sees the USN once, audited",
+    (await form.locator(".form__ok").textContent())?.includes(studentUsn) &&
+      audits("view_usn") === "1",
+  );
+  check(
+    "USN value is not in the audit log",
+    psql(
+      `select count(*) from private.admin_audit where action = 'view_usn' and coalesce(reason, '') like '%${studentUsn}%'`,
+    ) === "0",
+  );
+
+  const postId = submitAs(student.id, { role: `E2E Fix Role ${tag}`, anonymous: true });
   psqlAs(mod.id, `select public.moderate_experience('${postId}', 'approve');`);
+  const anonPub = await (await fetch(`${APP}/experiences/${postId}`)).text();
+  check("anonymous post hides the name publicly", !anonPub.includes(studentName));
   await p.goto(`${APP}/admin/posts/${postId}`, { waitUntil: "networkidle" });
+  const rv = p.locator("section[aria-labelledby=reveal-author] details");
+  await rv.locator("summary").click();
+  const rvf = rv.locator("form");
+  await rvf.locator("input[name=reason]").fill("Third NDA report, checking the account");
+  await rvf.locator("button[type=submit]").click();
+  await rvf.locator(".form__ok").waitFor();
+  check(
+    "reveal shows the author, audited",
+    (await rvf.locator(".form__ok").textContent())?.includes(studentName) &&
+      audits("reveal_author") === "1",
+  );
   const qs = p.locator("details", { has: p.locator("summary:has-text('Fix question 1')") });
   await qs.locator("summary").click();
   const qf = qs.locator("form");

@@ -16,6 +16,7 @@ import {
   setRoleAction,
   setSuspendedAction,
   setUserDetailsAction,
+  viewUsnAction,
 } from "../actions";
 
 export const metadata: Metadata = { title: "Users and roles · Admin", robots: { index: false } };
@@ -303,6 +304,22 @@ export default async function AdminUsersPage({
                                   </select>
                                 </div>
                                 <ReasonField id={`details-reason-${p.id}`} />
+                              </ActionForm>
+                            </details>
+                          ) : null}
+                          {p.onboarded_at ? (
+                            <details className="admin-details">
+                              <summary>View USN</summary>
+                              <ActionForm
+                                action={viewUsnAction}
+                                submitLabel="Show USN"
+                                label={`View USN for ${p.full_name}`}
+                              >
+                                <input type="hidden" name="user" value={p.id} />
+                                <ReasonField
+                                  id={`usn-reason-${p.id}`}
+                                  hint="USNs are private. Look one up only to check a duplicate or verify a person. Your reason is kept in the audit log; the USN is not."
+                                />
                               </ActionForm>
                             </details>
                           ) : null}

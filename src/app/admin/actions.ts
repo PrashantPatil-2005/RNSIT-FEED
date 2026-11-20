@@ -714,3 +714,38 @@ export async function deletePostAction(_p: ActionState, data: FormData): Promise
   revalidatePath("/", "layout");
   redirect("/admin/posts?deleted=1");
 }
+
+// ---------- Reveal and USN lookup (C7) ----------
+// Both read one person's private data, so each needs a reason and writes an audit row. The value is
+// returned only in this response: nothing is cached, stored or written to the audit log.
+
+export async function revealAuthorAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const post = text(data, "post", 40);
+  const reason = text(data, "reason");
+  if (!isUuid(post)) return { error: "Invalid request." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { data: who, error } = await v.db.rpc("admin_reveal_author", {
+    p_experience: post,
+    p_reason: reason,
+  });
+  if (error) return { error: adminErrorMessage(error.message) };
+  const name = (who as { full_name?: string } | null)?.full_name;
+  return { ok: `Author: ${name ?? "unknown"}. This lookup is in the audit log.` };
+}
+
+export async function viewUsnAction(_p: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const user = text(data, "user", 40);
+  const reason = text(data, "reason");
+  if (!isUuid(user)) return { error: "Invalid request." };
+  if (user === v.user.id) return { error: "Your own USN is on your account page." };
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { data: usn, error } = await v.db.rpc("admin_get_usn", { p_user: user, p_reason: reason });
+  if (error) return { error: adminErrorMessage(error.message) };
+  return { ok: `USN: ${usn ?? "not set"}. This lookup is in the audit log.` };
+}
