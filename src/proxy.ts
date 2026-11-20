@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { authCookieOptions } from "@/lib/supabase/cookies";
-import { getSupabasePublicEnv } from "@/lib/supabase/env";
+import { canonicalRedirectUrl } from "@/lib/canonical-host";
+import { getSiteUrl, getSupabasePublicEnv } from "@/lib/supabase/env";
 
 /** Pages that need a signed-in user. Everything else stays public (reading is open). */
 const PROTECTED_PREFIXES = ["/account", "/onboarding", "/my", "/moderation", "/admin"];
@@ -17,6 +18,16 @@ const isProtected = (path: string) =>
  * enforces all permissions itself.
  */
 export async function proxy(request: NextRequest) {
+  // One origin per deployment, or sign-in breaks (see canonical-host.ts).
+  const canonical = canonicalRedirectUrl({
+    host: request.headers.get("host"),
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+    site: getSiteUrl(),
+    vercelEnv: process.env.VERCEL_ENV,
+  });
+  if (canonical) return NextResponse.redirect(canonical, 308);
+
   const env = getSupabasePublicEnv();
   let response = NextResponse.next({ request });
   if (!env) return response;

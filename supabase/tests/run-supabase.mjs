@@ -109,4 +109,13 @@ const seed = spawnSync(process.execPath, [join(root, "..", "scripts", "seed-demo
 });
 process.stdout.write(seed.stdout);
 process.stderr.write(seed.stderr);
+
+// The synthetic seed sets the allowed domain to example.test. Put the real college domain back
+// (site.collegeDomain in src/config/site.ts) so Google sign-in on the local site works after a run.
+// Browser tests create their accounts with asTestDomain() and do not need the switch.
+psql(
+  "update private.settings set value = 'rnsit.ac.in' where key = 'allowed_email_domain';",
+  "restore college domain",
+);
+console.log("Allowed sign-up domain restored to rnsit.ac.in.");
 process.exit(failed.length || seed.status !== 0 ? 1 : 0);

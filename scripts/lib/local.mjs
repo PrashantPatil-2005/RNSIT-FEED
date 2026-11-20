@@ -81,17 +81,35 @@ export function createChecker() {
   return { check, failed: () => failed };
 }
 
+/**
+ * Wraps SQL that creates synthetic @example.test accounts. The sign-up guard only accepts the
+ * allowed college domain, so the domain is switched to example.test and back INSIDE one
+ * transaction: other connections never see the change, and a real Google sign-in on the local
+ * site keeps working while tests run.
+ */
+export function asTestDomain(sql) {
+  return `begin;
+    create temp table _domain on commit drop as
+      select value from private.settings where key = 'allowed_email_domain';
+    update private.settings set value = 'example.test' where key = 'allowed_email_domain';
+    ${sql}
+    update private.settings set value = (select value from _domain) where key = 'allowed_email_domain';
+    commit;`;
+}
+
 /** Creates a confirmed test account. With `onboard`, also completes onboarding (dept 1, batch 1). */
 export function createUser(label, { onboard = false } = {}) {
   const id = randomUUID();
   const email = `e2e.${label}.${Date.now()}@example.test`;
   const password = `Synthetic-${randomUUID()}`;
-  psql(`insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  psql(
+    asTestDomain(`insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
       raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token,
       email_change_token_new, email_change)
     values ('00000000-0000-0000-0000-000000000000', '${id}', 'authenticated', 'authenticated', '${email}',
       extensions.crypt('${password}', extensions.gen_salt('bf')), now(),
-      '{"provider":"email","providers":["email"]}', '{"full_name":"Synthetic E2E ${label}"}', now(), now(), '', '', '', '');`);
+      '{"provider":"email","providers":["email"]}', '{"full_name":"Synthetic E2E ${label}"}', now(), now(), '', '', '', '');`),
+  );
   if (onboard) {
     const serial = String(100 + Math.floor(Math.random() * 400)).padStart(3, "0");
     const usn = `1RN00Z${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${serial}`;
