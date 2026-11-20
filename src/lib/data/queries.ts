@@ -46,7 +46,7 @@ export async function getReferenceData(db: DbClient): Promise<ReferenceData> {
   const [d, b, c, t] = await Promise.all([
     db.from("departments").select("id, code, name, active").order("code"),
     db.from("batches").select("id, grad_year").order("grad_year", { ascending: false }),
-    db.from("companies").select("id, name, slug").order("name"),
+    db.from("companies").select("id, name, slug").eq("listed", true).order("name"),
     db.from("topics").select("id, slug, name, active").order("name"),
   ]);
   if (d.error) throw new DataError("departments", d.error);
@@ -307,7 +307,7 @@ function countMap<K extends string>(json: Json | null): Partial<Record<K, number
 /** All companies, with stats for those that have approved posts. Sorted by post count, then name. */
 export async function listCompanies(db: DbClient): Promise<CompanyStats[]> {
   const [companies, stats] = await Promise.all([
-    db.from("companies").select("id, name, slug").order("name"),
+    db.from("companies").select("id, name, slug").eq("listed", true).order("name"),
     db.from("company_stats").select("*"),
   ]);
   if (companies.error) throw new DataError("companies", companies.error);
@@ -334,6 +334,7 @@ export async function getCompany(db: DbClient, slug: string): Promise<CompanySta
     .from("companies")
     .select("id, name, slug")
     .eq("slug", slug)
+    .eq("listed", true)
     .maybeSingle();
   if (company.error) throw new DataError("companies", company.error);
   if (!company.data) return null;

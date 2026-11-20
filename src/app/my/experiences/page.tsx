@@ -8,7 +8,6 @@ import { Notice } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { requireViewer } from "@/lib/auth/session";
-import { getReferenceData } from "@/lib/data/queries";
 
 export const metadata: Metadata = { title: "My experiences", robots: { index: false } };
 
@@ -42,14 +41,13 @@ export default async function MyExperiencesPage({
   const viewer = await requireViewer("/my/experiences");
   if (!viewer.profile?.onboarded) redirect("/onboarding");
   const sp = await searchParams;
-  const [{ data, error }, ref, removedComments] = await Promise.all([
+  const [{ data, error }, removedComments] = await Promise.all([
     viewer.db
       .from("my_experiences")
       .select(
-        "id, status, company_id, role_title, recruitment_year, is_anonymous, moderation_note, updated_at, submitted_at",
+        "id, status, company_name, role_title, recruitment_year, is_anonymous, moderation_note, updated_at, submitted_at",
       )
       .order("updated_at", { ascending: false }),
-    getReferenceData(viewer.db),
     // The member's own comments that a moderator removed (removal reasons stay staff-only).
     viewer.db
       .from("my_comments")
@@ -58,8 +56,6 @@ export default async function MyExperiencesPage({
       .order("removed_at", { ascending: false })
       .limit(20),
   ]);
-  const company = (id: string | null) =>
-    ref.companies.find((c) => c.id === id)?.name ?? "Company not chosen";
   const rows = data ?? [];
 
   return (
@@ -102,7 +98,7 @@ export default async function MyExperiencesPage({
                     <div className="my-item__main">
                       <p className="my-item__title">
                         {r.role_title || "Untitled draft"}{" "}
-                        <span className="muted">· {company(r.company_id)}</span>
+                        <span className="muted">· {r.company_name ?? "Company not chosen"}</span>
                       </p>
                       <p className="my-item__meta">
                         <span className={`status status--${r.status}`}>{info.label}</span>

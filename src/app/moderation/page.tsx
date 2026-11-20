@@ -67,7 +67,7 @@ export default async function ModerationQueuePage({
       viewer.db
         .from("moderation_experiences")
         .select(
-          "id, status, company_name, role_title, opportunity_type, department_code, batch_year, recruitment_year, is_anonymous, author_name, submitted_at, decided_at",
+          "id, status, company_name, company_listed, role_title, opportunity_type, department_code, batch_year, recruitment_year, is_anonymous, author_name, submitted_at, decided_at",
         )
         .eq("status", filter),
     )
@@ -192,6 +192,9 @@ export default async function ModerationQueuePage({
                   <Link href={`/moderation/${r.id}`} className="queue-row">
                     <span className="queue-row__title">
                       {r.role_title} <span className="muted">· {r.company_name}</span>
+                      {r.company_listed === false ? (
+                        <span className="muted"> (new company)</span>
+                      ) : null}
                     </span>
                     <span className="queue-row__meta">
                       <span>{r.opportunity_type ? opportunityLabels[r.opportunity_type] : ""}</span>

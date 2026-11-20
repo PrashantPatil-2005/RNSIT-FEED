@@ -16,6 +16,7 @@ export const RESULT = ["selected", "rejected", "waitlisted"] as const;
 export const ROUND_TYPES = ["oa", "technical", "hr", "gd", "managerial"] as const;
 
 export const LIMITS = {
+  companyMax: 120,
   roleMin: 2,
   roleMax: 120,
   rounds: 12,
@@ -54,7 +55,8 @@ export interface ResourceForm {
   label: string;
 }
 export interface DraftForm {
-  companyId: string;
+  /** Typed company name. Matches an existing company or alias, else a new one is created at submit. */
+  companyName: string;
   roleTitle: string;
   opportunityType: string;
   campusType: string;
@@ -70,7 +72,6 @@ export interface DraftForm {
   resources: ResourceForm[];
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const URL_RE = /^https?:\/\/[^\s]+$/i;
 
 let keySeq = 0;
@@ -96,7 +97,7 @@ export function emptyRound(): RoundForm {
 }
 export function emptyForm(): DraftForm {
   return {
-    companyId: "",
+    companyName: "",
     roleTitle: "",
     opportunityType: "",
     campusType: "",
@@ -131,7 +132,7 @@ const obj = (v: unknown): Record<string, unknown> =>
 export function normalizeForm(input: unknown): DraftForm {
   const f = obj(input);
   return {
-    companyId: UUID.test(str(f.companyId, 36)) ? str(f.companyId, 36) : "",
+    companyName: str(f.companyName, LIMITS.companyMax),
     roleTitle: str(f.roleTitle, LIMITS.roleMax),
     opportunityType: oneOf(f.opportunityType, OPPORTUNITY),
     campusType: oneOf(f.campusType, CAMPUS),
@@ -245,7 +246,7 @@ export function toPayload(form: DraftForm): PayloadResult {
 
   return {
     payload: {
-      company_id: form.companyId || null,
+      company_name: form.companyName.trim().replace(/\s+/g, " ") || null,
       role_title: role.length >= LIMITS.roleMin ? role : null,
       opportunity_type: form.opportunityType || null,
       campus_type: form.campusType || null,
@@ -273,7 +274,8 @@ export interface SubmitIssue {
 export function validateForSubmit(form: DraftForm): SubmitIssue[] {
   const issues: SubmitIssue[] = [];
   const role = form.roleTitle.trim();
-  if (!form.companyId) issues.push({ field: "companyId", message: "Choose the company." });
+  if (!form.companyName.trim())
+    issues.push({ field: "companyName", message: "Enter the company name." });
   if (role.length < LIMITS.roleMin)
     issues.push({ field: "roleTitle", message: "Enter the role title." });
   if (!form.opportunityType)
@@ -309,7 +311,7 @@ export function fromExperienceJson(json: unknown): DraftForm {
   const j = obj(json);
   const s = (v: unknown) => (v === null || v === undefined ? "" : String(v));
   return normalizeForm({
-    companyId: s(j.company_id),
+    companyName: s(j.company_name),
     roleTitle: s(j.role_title),
     opportunityType: s(j.opportunity_type),
     campusType: s(j.campus_type),

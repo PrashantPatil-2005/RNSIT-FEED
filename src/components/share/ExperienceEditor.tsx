@@ -274,22 +274,26 @@ export function ExperienceEditor(props: EditorProps) {
         <legend>The role</legend>
         <div className="form-grid">
           <div className="field">
-            <label htmlFor="companyId">Company</label>
-            <select
-              id="companyId"
-              value={f.companyId}
-              onChange={(e) => update({ companyId: e.target.value })}
-              aria-invalid={invalid && !f.companyId ? true : undefined}
-            >
-              <option value="">Choose a company…</option>
+            <label htmlFor="companyName">Company</label>
+            <input
+              id="companyName"
+              type="text"
+              list="company-options"
+              autoComplete="off"
+              maxLength={LIMITS.companyMax}
+              placeholder="e.g. Infosys"
+              value={f.companyName}
+              onChange={(e) => update({ companyName: e.target.value })}
+              aria-invalid={invalid && !f.companyName.trim() ? true : undefined}
+              aria-describedby="companyName-hint"
+            />
+            <datalist id="company-options">
               {props.companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
+                <option key={c.id} value={c.name} />
               ))}
-            </select>
-            <p className="field__hint">
-              Not listed? Companies are added by the admins; mention it to the site team.
+            </datalist>
+            <p className="field__hint" id="companyName-hint">
+              {companyHint(f.companyName, props.companies)}
             </p>
           </div>
           <div className="field">
@@ -499,6 +503,13 @@ export function ExperienceEditor(props: EditorProps) {
       </div>
     </form>
   );
+}
+
+function companyHint(value: string, companies: { name: string }[]): string {
+  const typed = value.trim().replace(/\s+/g, " ").toLowerCase();
+  if (!typed) return "Pick a suggestion or type any company name.";
+  if (companies.some((c) => c.name.toLowerCase() === typed)) return "Listed company.";
+  return "Not listed yet? That's fine: it is added when a moderator approves your post. Check the spelling.";
 }
 
 function Choice({

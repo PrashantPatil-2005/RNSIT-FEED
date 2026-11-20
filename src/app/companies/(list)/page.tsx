@@ -45,8 +45,8 @@ export default async function CompaniesPage() {
           {companies.length === 0 ? (
             <StateMessage title="No companies listed yet">
               <p>
-                Companies are added by the site admins. They will appear here once the list is
-                seeded.
+                Companies appear here once the site team adds them or a shared experience is
+                approved.
               </p>
             </StateMessage>
           ) : null}
