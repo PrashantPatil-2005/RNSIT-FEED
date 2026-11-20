@@ -32,6 +32,7 @@ export const ADMIN_SECTIONS = [
   { href: "/admin/invites", label: "Alumni invites" },
   { href: "/admin/companies", label: "Companies" },
   { href: "/admin/topics", label: "Topics" },
+  { href: "/admin/settings", label: "Settings" },
   { href: "/admin/audit", label: "Audit log" },
 ] as const;
 
@@ -55,6 +56,7 @@ export const auditActionLabels: Record<string, string> = {
   unassign_moderator_department: "Moderator removed from department",
   moderator_step_down: "Moderator stepped down",
   owner_auto_admin: "Owner signed up as admin",
+  change_setting: "Site setting changed",
 };
 
 /**

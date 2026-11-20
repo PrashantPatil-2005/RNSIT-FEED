@@ -338,6 +338,62 @@ try {
       `${topicName} Renamed|${topicSlug}`,
   );
 
+  // ---------- Site settings ----------
+  const notice = `E2E notice ${tag}`;
+  await p.goto(`${APP}/admin/settings`, { waitUntil: "networkidle" });
+  const nf = p.getByRole("form", { name: "Banner notice" });
+  await nf.locator("input[name=value]").fill(notice);
+  await nf.locator("input[name=reason]").fill("Announcing the placement season");
+  await nf.locator("button[type=submit]").click();
+  await nf.locator(".form__ok").waitFor();
+  const vis = await browser.newContext();
+  const vpage = await vis.newPage();
+  await vpage.goto(`${APP}/`, { waitUntil: "networkidle" });
+  check(
+    "visitors see the banner notice",
+    (await vpage.textContent(".status-banner"))?.includes(notice),
+  );
+  await p.reload({ waitUntil: "networkidle" });
+  const commentsRow = p.locator("li.my-item", { hasText: "Members can comment" }).first();
+  form = await openForm(p, "Members can comment", "Pause comments");
+  await form.locator("input[name=reason]").fill("Too much spam tonight");
+  await form.locator("button[type=submit]").click();
+  await p.locator("li.my-item .status", { hasText: "Paused" }).first().waitFor();
+  check(
+    "comments switch saved",
+    psql(`select value from private.settings where key = 'comments_open'`) === "false",
+  );
+  await vpage.reload({ waitUntil: "networkidle" });
+  check(
+    "banner says comments are paused",
+    (await vpage.textContent(".status-banner"))?.includes("Paused for now: comments"),
+  );
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, "Members cannot add comments", "Reopen");
+  await form.locator("input[name=reason]").fill("Spam has stopped now");
+  await form.locator("button[type=submit]").click();
+  await commentsRow.waitFor();
+  check(
+    "comments reopened",
+    psql(`select value from private.settings where key = 'comments_open'`) === "true",
+  );
+  const ds = p.locator("section[aria-labelledby=domain-title] details");
+  await ds.locator("summary").click();
+  const df = ds.locator("form");
+  await df.locator("input[name=reason]").fill("Testing the domain confirmation");
+  await df.locator("button[type=submit]").click();
+  await df.locator(".form__error").waitFor();
+  check(
+    "domain change needs the confirmation tick",
+    (await df.locator(".form__error").textContent())?.includes("Tick the box"),
+  );
+  await p.goto(`${APP}/admin`, { waitUntil: "networkidle" });
+  check(
+    "overview shows needs-attention panel",
+    (await p.textContent("main"))?.includes("Needs attention"),
+  );
+  await vis.close();
+
   // ---------- Audit log ----------
   await p.goto(`${APP}/admin/audit`, { waitUntil: "networkidle" });
   check(
@@ -357,6 +413,7 @@ try {
       "Alumni invite revoked",
       "Company list changed",
       "Topic list changed",
+      "Site setting changed",
       "Audit log viewed",
     ].every((t) => log.includes(t)),
   );
@@ -378,6 +435,7 @@ try {
     "/admin/invites",
     "/admin/companies",
     "/admin/topics",
+    "/admin/settings",
     "/admin/audit",
   ]) {
     await m.page.goto(`${APP}${path}`, { waitUntil: "networkidle" });
@@ -392,6 +450,7 @@ try {
   try {
     psql(`delete from public.companies where name = '${companyName}'`);
     psql(`delete from public.topics where name like 'E2E Topic ${tag}%'`);
+    psql(`delete from private.settings where key in ('site_notice', 'comments_open')`);
   } catch (e) {
     console.error(`company cleanup failed: ${e.message}`);
   }

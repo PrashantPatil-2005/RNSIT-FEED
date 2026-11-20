@@ -88,12 +88,13 @@ end $$;
 do $$
 declare v_bad text;
 begin
-  -- anon may execute exactly one function
+  -- anon may execute exactly two functions: search, and site_status (public switches and the
+  -- banner notice only; migration 026). PUBLIC may execute none.
   select string_agg(p.proname, ', ') into v_bad
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname in ('public', 'private')
-    and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('public', p.oid, 'execute'))
-    and p.proname <> 'search_experiences';
+    and ((has_function_privilege('anon', p.oid, 'execute') and p.proname not in ('search_experiences', 'site_status'))
+      or (has_function_privilege('public', p.oid, 'execute') and p.proname <> 'search_experiences'));
   perform test.assert(v_bad is null, 'anon or PUBLIC can execute: ' || coalesce(v_bad, ''));
 
   -- authenticated may execute only the documented member/staff/admin functions and two helpers
@@ -107,6 +108,7 @@ begin
       'moderate_experience', 'resolve_report', 'moderation_experience_detail',
       'admin_set_user_role', 'admin_correct_name', 'admin_reveal_author', 'admin_get_usn',
       'admin_create_company', 'admin_add_company_alias', 'admin_create_topic', 'admin_rename_topic', 'admin_owner_id', 'admin_list_audit',
+      'site_status', 'admin_list_settings', 'admin_set_setting',
       'admin_usn_case_take', 'admin_usn_case_notify', 'admin_usn_case_approve',
       'admin_usn_case_deny', 'admin_usn_case_execute',
       'cancel_submission', 'set_helpful_vote', 'add_comment', 'delete_my_comment', 'report_comment',

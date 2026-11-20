@@ -44,6 +44,8 @@ const submitMessages: Record<SubmitErrorCode, string> = {
     "You already have a pending or published experience for this company, role and year. Withdraw it first if you want to replace it.",
   pending_limit: "You have 5 experiences waiting for review. Please wait for moderators first.",
   already_submitted: "This experience was already submitted.",
+  posting_paused:
+    "New posts are paused by the site team for now. Your draft is saved; submit it once posting reopens.",
 };
 
 export interface EditorProps {

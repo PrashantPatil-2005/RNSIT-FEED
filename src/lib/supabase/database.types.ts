@@ -2028,6 +2028,13 @@ export type Database = {
           verification_method: string;
         }[];
       };
+      admin_list_settings: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          key: string;
+          value: string;
+        }[];
+      };
       admin_moderator_activity: {
         Args: { p_days?: number };
         Returns: {
@@ -2055,6 +2062,10 @@ export type Database = {
       };
       admin_reveal_author: { Args: { p_experience: string; p_reason: string }; Returns: Json };
       admin_revoke_alumni_invite: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_set_setting: {
+        Args: { p_key: string; p_reason: string; p_value: string };
+        Returns: undefined;
+      };
       admin_set_user_role: {
         Args: {
           p_reason: string;
@@ -2219,6 +2230,7 @@ export type Database = {
         }[];
       };
       set_helpful_vote: { Args: { p_experience: string; p_helpful: boolean }; Returns: number };
+      site_status: { Args: Record<PropertyKey, never>; Returns: Json };
       submit_experience: { Args: { p_id: string }; Returns: undefined };
       withdraw_experience: { Args: { p_id: string }; Returns: undefined };
     };
@@ -2242,7 +2254,8 @@ export type Database = {
         | "unassign_moderator_department"
         | "moderator_step_down"
         | "manage_topic"
-        | "owner_auto_admin";
+        | "owner_auto_admin"
+        | "change_setting";
       campus_type: "on_campus" | "off_campus";
       comment_status: "visible" | "removed";
       exp_status:
@@ -2411,6 +2424,7 @@ export const Constants = {
         "moderator_step_down",
         "manage_topic",
         "owner_auto_admin",
+        "change_setting",
       ],
       campus_type: ["on_campus", "off_campus"],
       comment_status: ["visible", "removed"],

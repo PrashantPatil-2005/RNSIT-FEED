@@ -79,7 +79,12 @@ export async function saveDraftAction(input: {
 
 export type SubmitResult = { ok: false; code: SubmitErrorCode; issues?: string[] };
 export type SubmitErrorCode =
-  SaveErrorCode | "incomplete" | "duplicate" | "pending_limit" | "already_submitted";
+  | SaveErrorCode
+  | "incomplete"
+  | "duplicate"
+  | "pending_limit"
+  | "already_submitted"
+  | "posting_paused";
 
 /**
  * Saves the final state and submits it for moderation in one server round trip. On success the
@@ -104,6 +109,7 @@ export async function submitExperienceAction(input: {
   if (error) {
     const msg = error.message;
     if (msg.includes("duplicate_submission")) return { ok: false, code: "duplicate" };
+    if (msg.includes("posting_paused")) return { ok: false, code: "posting_paused" };
     if (msg.includes("incomplete")) return { ok: false, code: "incomplete" };
     if (msg.includes("limit_reached")) return { ok: false, code: "pending_limit" };
     if (msg.includes("invalid_state")) return { ok: false, code: "already_submitted" };

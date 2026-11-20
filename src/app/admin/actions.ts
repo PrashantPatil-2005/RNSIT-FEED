@@ -315,3 +315,49 @@ export async function unassignDepartmentAction(
   revalidatePath("/moderation");
   return { ok: "Removed from the department." };
 }
+
+const SETTING_KEYS = [
+  "signups_open",
+  "posting_open",
+  "comments_open",
+  "site_notice",
+  "alumni_invite_days",
+  "allowed_email_domain",
+] as const;
+type SettingKey = (typeof SETTING_KEYS)[number];
+const isSettingKey = (v: string): v is SettingKey =>
+  (SETTING_KEYS as readonly string[]).includes(v);
+
+const settingDone: Record<SettingKey, (value: string) => string> = {
+  signups_open: (v) => (v === "true" ? "New sign-ups are open." : "New sign-ups are paused."),
+  posting_open: (v) => (v === "true" ? "Posting is open." : "New posts are paused for members."),
+  comments_open: (v) => (v === "true" ? "Comments are open." : "Comments are paused for members."),
+  site_notice: (v) => (v ? "Notice published in the site banner." : "Notice removed."),
+  alumni_invite_days: (v) => `New alumni invites stay open for ${v} days.`,
+  allowed_email_domain: (v) => `New sign-ups now need an @${v} address.`,
+};
+
+/** Changes one site setting through the audited admin_set_setting function (migration 026). */
+export async function setSettingAction(_prev: ActionState, data: FormData): Promise<ActionState> {
+  const v = await adminViewer();
+  if (!v) return NOT_ALLOWED;
+  const key = text(data, "key", 40);
+  const value = text(data, "value", 400);
+  const reason = text(data, "reason");
+  if (!isSettingKey(key)) return { error: "Invalid request." };
+  if (key === "site_notice" && value.length > 280)
+    return { error: "Keep the notice to 280 characters." };
+  if (key === "allowed_email_domain" && data.get("confirm_domain") !== "yes") {
+    return { error: "Tick the box to confirm changing the college email domain." };
+  }
+  const bad = reasonError(reason);
+  if (bad) return { error: bad };
+  const { error } = await v.db.rpc("admin_set_setting", {
+    p_key: key,
+    p_value: value,
+    p_reason: reason,
+  });
+  if (error) return { error: adminErrorMessage(error.message) };
+  revalidatePath("/", "layout");
+  return { ok: settingDone[key](key === "site_notice" ? value : value.toLowerCase()) };
+}

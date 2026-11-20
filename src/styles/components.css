@@ -83,7 +83,8 @@
   align-items: center;
   padding-block: var(--space-2);
 }
-.status-banner strong {
+.status-banner strong,
+.status-banner__notice {
   font-weight: 600;
 }
 .status-banner a {
