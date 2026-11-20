@@ -34,6 +34,7 @@ const saveMessages: Record<SaveErrorCode, string> = {
   not_found: "This draft no longer exists.",
   draft_limit: "You already have 10 drafts. Delete one to start another.",
   invalid: "Some details could not be saved. Check the highlighted fields.",
+  suspended: "Your account is suspended by the site team, so nothing can be saved.",
   failed: "Saving failed. Check your connection; we will retry when you edit again.",
 };
 
@@ -44,6 +45,8 @@ const submitMessages: Record<SubmitErrorCode, string> = {
     "You already have a pending or published experience for this company, role and year. Withdraw it first if you want to replace it.",
   pending_limit: "You have 5 experiences waiting for review. Please wait for moderators first.",
   already_submitted: "This experience was already submitted.",
+  posting_paused:
+    "New posts are paused by the site team for now. Your draft is saved; submit it once posting reopens.",
 };
 
 export interface EditorProps {

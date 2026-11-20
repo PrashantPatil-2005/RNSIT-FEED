@@ -705,6 +705,7 @@ export type Database = {
           id: string;
           onboarded_at: string | null;
           role: Database["public"]["Enums"]["user_role"];
+          suspended_at: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -717,6 +718,7 @@ export type Database = {
           id: string;
           onboarded_at?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
+          suspended_at?: string | null;
         };
         Update: {
           batch_id?: number | null;
@@ -728,6 +730,7 @@ export type Database = {
           id?: string;
           onboarded_at?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
+          suspended_at?: string | null;
         };
         Relationships: [
           {
@@ -1018,17 +1021,20 @@ export type Database = {
       };
       topics: {
         Row: {
+          active: boolean;
           id: number;
           name: string;
           slug: string;
         };
         ComputedFields: never;
         Insert: {
+          active?: boolean;
           id?: never;
           name: string;
           slug: string;
         };
         Update: {
+          active?: boolean;
           id?: never;
           name?: string;
           slug?: string;
@@ -1991,9 +1997,32 @@ export type Database = {
         Args: { p_name: string; p_reason: string; p_user: string };
         Returns: undefined;
       };
+      admin_create_batch: { Args: { p_reason: string; p_year: number }; Returns: number };
       admin_create_company: {
         Args: { p_name: string; p_reason: string; p_slug: string };
         Returns: string;
+      };
+      admin_create_department: {
+        Args: { p_code: string; p_name: string; p_reason: string };
+        Returns: number;
+      };
+      admin_create_topic: {
+        Args: { p_name: string; p_reason: string; p_slug: string };
+        Returns: number;
+      };
+      admin_delete_batch: { Args: { p_batch: number; p_reason: string }; Returns: undefined };
+      admin_delete_company: { Args: { p_company: string; p_reason: string }; Returns: undefined };
+      admin_delete_post: { Args: { p_experience: string; p_reason: string }; Returns: undefined };
+      admin_delete_topic: { Args: { p_reason: string; p_topic: number }; Returns: undefined };
+      admin_edit_post: {
+        Args: {
+          p_experience: string;
+          p_field: string;
+          p_reason: string;
+          p_target: string;
+          p_value: string;
+        };
+        Returns: undefined;
       };
       admin_get_usn: { Args: { p_reason: string; p_user: string }; Returns: string };
       admin_invite_alumnus: { Args: { p_email: string; p_reason: string }; Returns: string };
@@ -2024,6 +2053,17 @@ export type Database = {
           verification_method: string;
         }[];
       };
+      admin_list_settings: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          key: string;
+          value: string;
+        }[];
+      };
+      admin_merge_companies: {
+        Args: { p_from: string; p_into: string; p_reason: string };
+        Returns: number;
+      };
       admin_moderator_activity: {
         Args: { p_days?: number };
         Returns: {
@@ -2044,8 +2084,58 @@ export type Database = {
           name: string;
         }[];
       };
+      admin_owner_id: { Args: Record<PropertyKey, never>; Returns: string };
+      admin_post_detail: { Args: { p_experience: string }; Returns: Json };
+      admin_reference_usage: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          kind: string;
+          ref_id: string;
+          uses: number;
+        }[];
+      };
+      admin_remove_company_alias: {
+        Args: { p_alias: string; p_company: string; p_reason: string };
+        Returns: undefined;
+      };
+      admin_remove_user_comments: {
+        Args: {
+          p_reason: string;
+          p_reason_code: Database["public"]["Enums"]["reason_code"];
+          p_user: string;
+        };
+        Returns: number;
+      };
+      admin_rename_company: {
+        Args: { p_company: string; p_name: string; p_reason: string };
+        Returns: undefined;
+      };
+      admin_rename_topic: {
+        Args: { p_name: string; p_reason: string; p_topic: number };
+        Returns: undefined;
+      };
+      admin_request_user_deletion: {
+        Args: { p_reason: string; p_user: string };
+        Returns: undefined;
+      };
       admin_reveal_author: { Args: { p_experience: string; p_reason: string }; Returns: Json };
       admin_revoke_alumni_invite: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_set_setting: {
+        Args: { p_key: string; p_reason: string; p_value: string };
+        Returns: undefined;
+      };
+      admin_set_suspended: {
+        Args: { p_reason: string; p_suspended: boolean; p_user: string };
+        Returns: undefined;
+      };
+      admin_set_topic_active: {
+        Args: { p_active: boolean; p_reason: string; p_topic: number };
+        Returns: undefined;
+      };
+      admin_set_user_details: {
+        Args: { p_batch: number; p_department: number; p_reason: string; p_user: string };
+        Returns: undefined;
+      };
       admin_set_user_role: {
         Args: {
           p_reason: string;
@@ -2056,6 +2146,10 @@ export type Database = {
       };
       admin_unassign_moderator_department: {
         Args: { p_department: number; p_reason: string; p_user: string };
+        Returns: undefined;
+      };
+      admin_update_department: {
+        Args: { p_active: boolean; p_department: number; p_name: string; p_reason: string };
         Returns: undefined;
       };
       admin_user_role_history: {
@@ -2210,6 +2304,7 @@ export type Database = {
         }[];
       };
       set_helpful_vote: { Args: { p_experience: string; p_helpful: boolean }; Returns: number };
+      site_status: { Args: Record<PropertyKey, never>; Returns: Json };
       submit_experience: { Args: { p_id: string }; Returns: undefined };
       withdraw_experience: { Args: { p_id: string }; Returns: undefined };
     };
@@ -2231,7 +2326,14 @@ export type Database = {
         | "revoke_alumni_invite"
         | "assign_moderator_department"
         | "unassign_moderator_department"
-        | "moderator_step_down";
+        | "moderator_step_down"
+        | "manage_topic"
+        | "owner_auto_admin"
+        | "change_setting"
+        | "manage_reference"
+        | "manage_user"
+        | "edit_post"
+        | "delete_post";
       campus_type: "on_campus" | "off_campus";
       comment_status: "visible" | "removed";
       exp_status:
@@ -2398,6 +2500,13 @@ export const Constants = {
         "assign_moderator_department",
         "unassign_moderator_department",
         "moderator_step_down",
+        "manage_topic",
+        "owner_auto_admin",
+        "change_setting",
+        "manage_reference",
+        "manage_user",
+        "edit_post",
+        "delete_post",
       ],
       campus_type: ["on_campus", "off_campus"],
       comment_status: ["visible", "removed"],

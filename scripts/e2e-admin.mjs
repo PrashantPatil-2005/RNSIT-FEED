@@ -13,6 +13,8 @@ import {
   requireDemoData,
   sessionCookies,
   setRole,
+  submitAs,
+  psqlAs,
   waitForApp,
   waitForFormReset,
 } from "./lib/local.mjs";
@@ -27,6 +29,7 @@ const browser = await chromium.launch({ channel: "msedge", headless: true });
 const users = [];
 const tag = Date.now().toString(36);
 const companyName = `E2E Admin Co ${tag}`;
+const topicName = `E2E Topic ${tag}`;
 const role = (id) => psql(`select role from public.profiles where id = '${id}'`);
 
 async function pageFor(user, viewport = { width: 1280, height: 900 }) {
@@ -35,9 +38,20 @@ async function pageFor(user, viewport = { width: 1280, height: 900 }) {
   return { ctx, page: await ctx.newPage() };
 }
 
+/**
+ * A list row by the text of its title. Matching on the whole row is not safe: rows carry other
+ * rows' names inside their forms (for example the merge-into dropdown on the companies page).
+ */
+function rowByTitle(page, title) {
+  return page
+    .locator("li.my-item")
+    .filter({ has: page.locator(".my-item__title", { hasText: title }) })
+    .first();
+}
+
 /** Opens a row's <details> section and returns its form. */
 async function openForm(page, rowText, summary) {
-  const row = page.locator("li.my-item", { hasText: rowText }).first();
+  const row = rowByTitle(page, rowText);
   const section = row.locator("details", { has: page.locator(`summary:has-text('${summary}')`) });
   await section.locator("summary").click();
   return section.locator("form");
@@ -302,10 +316,265 @@ try {
   await p.reload({ waitUntil: "networkidle" });
   check(
     "alias listed under the company",
-    (await p.locator("li.my-item", { hasText: companyName }).textContent())?.includes(
-      `E2E Alias ${tag}`,
-    ),
+    (await rowByTitle(p, companyName).textContent())?.includes(`E2E Alias ${tag}`),
   );
+
+  // ---------- Topics ----------
+  await p.goto(`${APP}/admin/topics`, { waitUntil: "networkidle" });
+  const tf = p.getByRole("form", { name: "Add a topic" });
+  await tf.locator("input[name=name]").fill(topicName);
+  await tf.locator("input[name=reason]").fill("New interview area seen this season");
+  await tf.locator("button[type=submit]").click();
+  await tf.locator(".form__ok").waitFor();
+  await waitForFormReset(tf, "input[name=name]");
+  const topicSlug = psql(`select slug from public.topics where name = '${topicName}'`);
+  check("topic created with a generated code", topicSlug === `e2e-topic-${tag}`, topicSlug);
+  await tf.locator("input[name=name]").fill(topicName.toLowerCase());
+  await tf.locator("input[name=reason]").fill("Adding the same topic again");
+  await tf.locator("button[type=submit]").click();
+  await tf.locator(".form__error").waitFor();
+  check(
+    "duplicate topic name refused (case-insensitive)",
+    (await tf.locator(".form__error").textContent())?.includes("already exists"),
+  );
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, topicName, "Rename");
+  await form.locator("input[name=name]").fill(`${topicName} Renamed`);
+  await form.locator("input[name=reason]").fill("Clearer name for members");
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__ok").waitFor();
+  check(
+    "topic renamed, code unchanged",
+    psql(`select name || '|' || slug from public.topics where slug = '${topicSlug}'`) ===
+      `${topicName} Renamed|${topicSlug}`,
+  );
+
+  // ---------- Users: suspend, fix details, delete; posts: fix text, delete ----------
+  await p.goto(`${APP}/admin/users?q=${encodeURIComponent(studentName)}`, {
+    waitUntil: "networkidle",
+  });
+  form = await openForm(p, studentName, "Suspend");
+  await form.locator("input[name=reason]").fill("Posting spam links repeatedly");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, studentName).locator(".status", { hasText: "Suspended" }).waitFor();
+  check(
+    "member suspended",
+    psql(`select suspended_at is not null from public.profiles where id = '${student.id}'`) === "t",
+  );
+  const sp = await pageFor(student);
+  await sp.page.goto(`${APP}/account`, { waitUntil: "networkidle" });
+  check(
+    "suspended member sees the notice on /account",
+    (await sp.page.textContent("main"))?.includes("Your account is suspended"),
+  );
+  await sp.ctx.close();
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, studentName, "Lift suspension");
+  await form.locator("input[name=reason]").fill("Appeal accepted by the team");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, studentName).locator("summary", { hasText: "Suspend" }).waitFor();
+  check(
+    "suspension lifted",
+    psql(`select suspended_at is null from public.profiles where id = '${student.id}'`) === "t",
+  );
+  await p.goto(`${APP}/admin/users?role=admin`, { waitUntil: "networkidle" });
+  check(
+    "admin rows offer no suspend or delete",
+    (await p.locator("li.my-item").count()) > 0 &&
+      (await p.locator("li.my-item summary:has-text('Suspend')").count()) === 0 &&
+      (await p.locator("li.my-item summary:has-text('Delete account')").count()) === 0,
+  );
+
+  const postId = submitAs(student.id, { role: `E2E Fix Role ${tag}` });
+  psqlAs(mod.id, `select public.moderate_experience('${postId}', 'approve');`);
+  await p.goto(`${APP}/admin/posts/${postId}`, { waitUntil: "networkidle" });
+  const qs = p.locator("details", { has: p.locator("summary:has-text('Fix question 1')") });
+  await qs.locator("summary").click();
+  const qf = qs.locator("form");
+  await qf.locator("textarea[name=value]").fill("Explain hashing, wording fixed by admin");
+  await qf.locator("input[name=reason]").fill("Interviewer name removed from text");
+  await qf.locator("button[type=submit]").click();
+  await qf.locator(".form__ok").waitFor();
+  check(
+    "question text fixed on a published post",
+    psql(
+      `select q.body from public.questions q join public.rounds r on r.id = q.round_id where r.experience_id = '${postId}'`,
+    ) === "Explain hashing, wording fixed by admin" &&
+      psql(`select status from public.experiences where id = '${postId}'`) === "approved",
+  );
+  const pub = await (await fetch(`${APP}/experiences/${postId}`)).text();
+  check("public page shows the fix", pub.includes("wording fixed by admin"));
+  const del = p.locator("section[aria-labelledby=delete-post] details");
+  await del.locator("summary").click();
+  const delf = del.locator("form");
+  await delf.locator("input[name=confirm_text]").fill("delete");
+  await delf.locator("input[name=reason]").fill("NDA breach, must be erased");
+  await delf.locator("button[type=submit]").click();
+  await delf.locator(".form__error").waitFor();
+  check(
+    "delete needs DELETE typed",
+    (await delf.locator(".form__error").textContent())?.includes("Type DELETE"),
+  );
+  await delf.locator("input[name=confirm_text]").fill("DELETE");
+  await delf.locator("button[type=submit]").click();
+  await p.waitForURL(`${APP}/admin/posts?deleted=1`);
+  check(
+    "post deleted permanently",
+    psql(`select count(*) from public.experiences where id = '${postId}'`) === "0",
+  );
+
+  // ---------- Reference data: companies, topics, departments, batches ----------
+  const dupName = `E2E Dup Co ${tag}`;
+  await p.goto(`${APP}/admin/companies`, { waitUntil: "networkidle" });
+  const cf2 = p.getByRole("form", { name: "Add a company" });
+  await cf2.locator("input[name=name]").fill(dupName);
+  await cf2.locator("input[name=reason]").fill("Duplicate spelling to merge");
+  await cf2.locator("button[type=submit]").click();
+  await cf2.locator(".form__ok").waitFor();
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, dupName, "Merge into another");
+  await form.locator("select[name=into]").selectOption({ label: companyName });
+  await form.locator("input[name=reason]").fill("Same company, two spellings");
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__error").waitFor();
+  check(
+    "merge needs the confirmation tick",
+    (await form.locator(".form__error").textContent())?.includes("Tick the box"),
+  );
+  await form.locator("input[name=confirm_merge]").check();
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, dupName).waitFor({ state: "detached" });
+  check(
+    "merged company gone, its name kept as alias",
+    psql(`select count(*) from public.companies where name = '${dupName}'`) === "0" &&
+      psql(`select count(*) from public.company_aliases where alias = '${dupName}'`) === "1",
+  );
+  form = await openForm(p, companyName, "Rename");
+  await form.locator("input[name=name]").fill(`${companyName} Renamed`);
+  await form.locator("input[name=reason]").fill("Official name changed");
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__ok").waitFor();
+  check(
+    "company renamed, old name kept as alias",
+    psql(`select count(*) from public.company_aliases where alias = '${companyName}'`) === "1",
+  );
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, `${companyName} Renamed`, "Delete");
+  await form.locator("input[name=reason]").fill("Created only for this test");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, `${companyName} Renamed`).waitFor({ state: "detached" });
+  check(
+    "unused company deleted",
+    psql(`select count(*) from public.companies where name like '${companyName}%'`) === "0",
+  );
+  check(
+    "used companies offer no delete",
+    (await p
+      .locator("li.my-item")
+      .filter({ has: p.locator(".my-item__title", { hasText: "Acme Synthetic" }) })
+      .locator("summary:has-text('Delete')")
+      .count()) === 0,
+  );
+
+  await p.goto(`${APP}/admin/topics`, { waitUntil: "networkidle" });
+  form = await openForm(p, `${topicName} Renamed`, "Hide");
+  await form.locator("input[name=reason]").fill("Not asked any more");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, `${topicName} Renamed`).locator(".status", { hasText: "Hidden" }).waitFor();
+  check(
+    "topic hidden",
+    psql(`select active from public.topics where slug = '${topicSlug}'`) === "f",
+  );
+
+  const deptCode = "Q" + String.fromCharCode(65 + (Date.now() % 26));
+  psql(`delete from public.departments where code = '${deptCode}'`);
+  await p.goto(`${APP}/admin/reference`, { waitUntil: "networkidle" });
+  const rf = p.getByRole("form", { name: "Add a department" });
+  await rf.locator("input[name=code]").fill(deptCode.toLowerCase());
+  await rf.locator("input[name=name]").fill(`E2E Dept ${tag}`);
+  await rf.locator("input[name=reason]").fill("New branch this year");
+  await rf.locator("button[type=submit]").click();
+  await rf.locator(".form__ok").waitFor();
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, `E2E Dept ${tag}`, "Edit");
+  await form.locator("input[name=active]").uncheck();
+  await form.locator("input[name=reason]").fill("Branch closed for now");
+  await form.locator("button[type=submit]").click();
+  await form.locator(".form__ok").waitFor();
+  check(
+    "department added (code upper-cased) and hidden",
+    psql(`select active from public.departments where code = '${deptCode}'`) === "f",
+  );
+  const bf = p.getByRole("form", { name: "Add a batch" });
+  await bf.locator("input[name=year]").fill("2098");
+  await bf.locator("input[name=reason]").fill("Future batch for testing");
+  await bf.locator("button[type=submit]").click();
+  await bf.locator(".form__ok").waitFor();
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, "Batch 2098", "Delete");
+  await form.locator("input[name=reason]").fill("Added by mistake today");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, "Batch 2098").waitFor({ state: "detached" });
+  check(
+    "unused batch deleted",
+    psql(`select count(*) from public.batches where grad_year = 2098`) === "0",
+  );
+  psql(`delete from public.departments where code = '${deptCode}'`);
+
+  // ---------- Site settings ----------
+  const notice = `E2E notice ${tag}`;
+  await p.goto(`${APP}/admin/settings`, { waitUntil: "networkidle" });
+  const nf = p.getByRole("form", { name: "Banner notice" });
+  await nf.locator("input[name=value]").fill(notice);
+  await nf.locator("input[name=reason]").fill("Announcing the placement season");
+  await nf.locator("button[type=submit]").click();
+  await nf.locator(".form__ok").waitFor();
+  const vis = await browser.newContext();
+  const vpage = await vis.newPage();
+  await vpage.goto(`${APP}/`, { waitUntil: "networkidle" });
+  check(
+    "visitors see the banner notice",
+    (await vpage.textContent(".status-banner"))?.includes(notice),
+  );
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, "Comments", "Pause comments");
+  await form.locator("input[name=reason]").fill("Too much spam tonight");
+  await form.locator("button[type=submit]").click();
+  await p.locator("li.my-item .status", { hasText: "Paused" }).first().waitFor();
+  check(
+    "comments switch saved",
+    psql(`select value from private.settings where key = 'comments_open'`) === "false",
+  );
+  await vpage.reload({ waitUntil: "networkidle" });
+  check(
+    "banner says comments are paused",
+    (await vpage.textContent(".status-banner"))?.includes("Paused for now: comments"),
+  );
+  await p.reload({ waitUntil: "networkidle" });
+  form = await openForm(p, "Comments", "Reopen");
+  await form.locator("input[name=reason]").fill("Spam has stopped now");
+  await form.locator("button[type=submit]").click();
+  await rowByTitle(p, "Comments").locator(".status", { hasText: "Open" }).waitFor();
+  check(
+    "comments reopened",
+    psql(`select value from private.settings where key = 'comments_open'`) === "true",
+  );
+  const ds = p.locator("section[aria-labelledby=domain-title] details");
+  await ds.locator("summary").click();
+  const df = ds.locator("form");
+  await df.locator("input[name=reason]").fill("Testing the domain confirmation");
+  await df.locator("button[type=submit]").click();
+  await df.locator(".form__error").waitFor();
+  check(
+    "domain change needs the confirmation tick",
+    (await df.locator(".form__error").textContent())?.includes("Tick the box"),
+  );
+  await p.goto(`${APP}/admin`, { waitUntil: "networkidle" });
+  check(
+    "overview shows needs-attention panel",
+    (await p.textContent("main"))?.includes("Needs attention"),
+  );
+  await vis.close();
 
   // ---------- Audit log ----------
   await p.goto(`${APP}/admin/audit`, { waitUntil: "networkidle" });
@@ -325,6 +594,12 @@ try {
       "Alumnus invited",
       "Alumni invite revoked",
       "Company list changed",
+      "Topic list changed",
+      "Site setting changed",
+      "Departments or batches changed",
+      "Member account changed",
+      "Post text fixed",
+      "Post deleted permanently",
       "Audit log viewed",
     ].every((t) => log.includes(t)),
   );
@@ -345,6 +620,10 @@ try {
     "/admin/users",
     "/admin/invites",
     "/admin/companies",
+    "/admin/topics",
+    "/admin/settings",
+    "/admin/reference",
+    "/admin/posts",
     "/admin/audit",
   ]) {
     await m.page.goto(`${APP}${path}`, { waitUntil: "networkidle" });
@@ -358,6 +637,8 @@ try {
   await browser.close();
   try {
     psql(`delete from public.companies where name = '${companyName}'`);
+    psql(`delete from public.topics where name like 'E2E Topic ${tag}%'`);
+    psql(`delete from private.settings where key in ('site_notice', 'comments_open')`);
   } catch (e) {
     console.error(`company cleanup failed: ${e.message}`);
   }

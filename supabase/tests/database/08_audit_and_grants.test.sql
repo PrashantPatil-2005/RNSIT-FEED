@@ -88,12 +88,13 @@ end $$;
 do $$
 declare v_bad text;
 begin
-  -- anon may execute exactly one function
+  -- anon may execute exactly two functions: search, and site_status (public switches and the
+  -- banner notice only; migration 026). PUBLIC may execute none.
   select string_agg(p.proname, ', ') into v_bad
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname in ('public', 'private')
-    and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('public', p.oid, 'execute'))
-    and p.proname <> 'search_experiences';
+    and ((has_function_privilege('anon', p.oid, 'execute') and p.proname not in ('search_experiences', 'site_status'))
+      or (has_function_privilege('public', p.oid, 'execute') and p.proname <> 'search_experiences'));
   perform test.assert(v_bad is null, 'anon or PUBLIC can execute: ' || coalesce(v_bad, ''));
 
   -- authenticated may execute only the documented member/staff/admin functions and two helpers
@@ -106,7 +107,13 @@ begin
       'mark_notice_read', 'request_account_deletion', 'request_usn_review', 'object_to_usn_release',
       'moderate_experience', 'resolve_report', 'moderation_experience_detail',
       'admin_set_user_role', 'admin_correct_name', 'admin_reveal_author', 'admin_get_usn',
-      'admin_create_company', 'admin_add_company_alias', 'admin_list_audit',
+      'admin_create_company', 'admin_add_company_alias', 'admin_create_topic', 'admin_rename_topic', 'admin_owner_id', 'admin_list_audit',
+      'site_status', 'admin_list_settings', 'admin_set_setting',
+      'admin_rename_company', 'admin_remove_company_alias', 'admin_merge_companies', 'admin_delete_company',
+      'admin_set_topic_active', 'admin_delete_topic', 'admin_create_department', 'admin_update_department',
+      'admin_create_batch', 'admin_delete_batch', 'admin_reference_usage',
+      'admin_set_suspended', 'admin_set_user_details', 'admin_request_user_deletion',
+      'admin_remove_user_comments', 'admin_edit_post', 'admin_delete_post', 'admin_post_detail',
       'admin_usn_case_take', 'admin_usn_case_notify', 'admin_usn_case_approve',
       'admin_usn_case_deny', 'admin_usn_case_execute',
       'cancel_submission', 'set_helpful_vote', 'add_comment', 'delete_my_comment', 'report_comment',

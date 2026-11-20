@@ -20,7 +20,7 @@ import { isUuid } from "@/lib/data/filters";
 async function member(): Promise<Viewer | null> {
   const v = await getViewer();
   const p = v?.profile;
-  if (!v || !p || !p.onboarded || p.deletionRequested) return null;
+  if (!v || !p || !p.onboarded || p.deletionRequested || p.suspended) return null;
   return v;
 }
 

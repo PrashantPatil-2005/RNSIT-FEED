@@ -15,6 +15,8 @@ export interface Profile {
   batchId: number | null;
   onboarded: boolean;
   deletionRequested: boolean;
+  /** Suspended by an admin (migration 030): can read, cannot act. */
+  suspended: boolean;
 }
 
 export interface Viewer {
@@ -39,7 +41,9 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!user) return null;
   const { data: p } = await db
     .from("profiles")
-    .select("id, full_name, role, department_id, batch_id, onboarded_at, deletion_requested_at")
+    .select(
+      "id, full_name, role, department_id, batch_id, onboarded_at, deletion_requested_at, suspended_at",
+    )
     .eq("id", user.id)
     .maybeSingle();
   return {
@@ -54,6 +58,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
           batchId: p.batch_id,
           onboarded: p.onboarded_at !== null,
           deletionRequested: p.deletion_requested_at !== null,
+          suspended: p.suspended_at !== null,
         }
       : null,
   };

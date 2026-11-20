@@ -11,7 +11,8 @@ export async function requireStaff(nextPath: string): Promise<Viewer> {
   const viewer = await requireViewer(nextPath);
   const p = viewer.profile;
   if (p && !p.onboarded) redirect("/onboarding");
-  if (!p || p.deletionRequested || (p.role !== "moderator" && p.role !== "admin")) notFound();
+  if (!p || p.deletionRequested || p.suspended || (p.role !== "moderator" && p.role !== "admin"))
+    notFound();
   return viewer;
 }
 
@@ -20,7 +21,7 @@ export async function requireAdmin(nextPath: string): Promise<Viewer> {
   const viewer = await requireViewer(nextPath);
   const p = viewer.profile;
   if (p && !p.onboarded) redirect("/onboarding");
-  if (!p || p.deletionRequested || p.role !== "admin") notFound();
+  if (!p || p.deletionRequested || p.suspended || p.role !== "admin") notFound();
   return viewer;
 }
 

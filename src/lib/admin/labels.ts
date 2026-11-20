@@ -28,9 +28,13 @@ export function isRole(v: unknown): v is UserRole {
 export const ADMIN_SECTIONS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/users", label: "Users and roles" },
+  { href: "/admin/posts", label: "Posts" },
   { href: "/admin/team", label: "Moderator team" },
   { href: "/admin/invites", label: "Alumni invites" },
   { href: "/admin/companies", label: "Companies" },
+  { href: "/admin/topics", label: "Topics" },
+  { href: "/admin/reference", label: "Departments and batches" },
+  { href: "/admin/settings", label: "Settings" },
   { href: "/admin/audit", label: "Audit log" },
 ] as const;
 
@@ -42,6 +46,7 @@ export const auditActionLabels: Record<string, string> = {
   view_usn: "USN viewed",
   view_audit: "Audit log viewed",
   manage_company: "Company list changed",
+  manage_topic: "Topic list changed",
   take_usn_case: "USN case taken",
   notify_usn_holder: "USN holder notified",
   approve_usn_case: "USN case approved",
@@ -52,6 +57,12 @@ export const auditActionLabels: Record<string, string> = {
   assign_moderator_department: "Moderator assigned to department",
   unassign_moderator_department: "Moderator removed from department",
   moderator_step_down: "Moderator stepped down",
+  owner_auto_admin: "Owner signed up as admin",
+  change_setting: "Site setting changed",
+  manage_reference: "Departments or batches changed",
+  manage_user: "Member account changed",
+  edit_post: "Post text fixed",
+  delete_post: "Post deleted permanently",
 };
 
 /**
@@ -74,6 +85,8 @@ export function adminErrorMessage(raw: string, context: "role" | "department" = 
     ],
     ["not_moderator", "Only moderators can cover a department. Make them a moderator first."],
     ["already_assigned", "This moderator already covers that department."],
+    ["owner_protected", "The owner's role cannot be changed."],
+    ["owner_only", "Only the owner can appoint or remove admins."],
     ["last_admin", "The last admin cannot be removed. Appoint another admin first."],
     ["not_needed", "College addresses can sign in directly; they do not need an invite."],
     ["already_registered", "An account with this address already exists."],
@@ -81,8 +94,18 @@ export function adminErrorMessage(raw: string, context: "role" | "department" = 
     ["companies_name_lower_key", "A company with this name already exists."],
     ["companies_slug_key", "A company with this web address already exists."],
     ["company_aliases_alias_lower_key", "This alias is already used."],
+    ["topics_name_lower_key", "A topic with this name already exists."],
+    ["topics_slug_key", "A topic with this short code already exists."],
+    [
+      "in_use",
+      "Posts or members still use this, so it cannot be deleted. Hide or merge it instead.",
+    ],
+    ["is_admin", "Admins cannot be suspended or deleted here. Change their role first."],
+    ["invalid_state", "Already done. Reload the page."],
+    ["departments_code_key", "A department with this code already exists."],
+    ["batches_grad_year_key", "This batch already exists."],
     ["not_found", "It no longer exists. Reload the page."],
-    ["forbidden", "Not allowed. Admins cannot change their own role."],
+    ["forbidden", "Not allowed. Admins cannot change their own role or account here."],
     ["invalid_input", "Check the values and try again."],
     ["check constraint", "Check the values and try again."],
   ];

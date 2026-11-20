@@ -105,7 +105,8 @@ async function decide(formData: FormData): Promise<Pick<DecisionState, "error" |
 async function staffViewer(): Promise<Viewer | null> {
   const v = await getViewer();
   const p = v?.profile;
-  if (!v || !p || !isStaffRole(p.role) || !p.onboarded || p.deletionRequested) return null;
+  if (!v || !p || !isStaffRole(p.role) || !p.onboarded || p.deletionRequested || p.suspended)
+    return null;
   return v;
 }
 

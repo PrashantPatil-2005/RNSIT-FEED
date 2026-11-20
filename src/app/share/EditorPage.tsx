@@ -23,6 +23,9 @@ export async function EditorPage({
   const ref = await getReferenceData(viewer.db);
   const dept = ref.departments.find((d) => d.id === viewer.profile?.departmentId);
   const batch = ref.batches.find((b) => b.id === viewer.profile?.batchId);
+  // Hidden topics are not offered, except ones this draft already uses (so they are not dropped).
+  const usedTopics = new Set(draft.form.rounds.flatMap((r) => r.topicIds));
+  const topics = ref.topics.filter((t) => t.active || usedTopics.has(t.id));
   return (
     <>
       <PageHeader
@@ -40,7 +43,7 @@ export async function EditorPage({
             moderationNote={draft.moderationNote}
             companies={ref.companies.map((c) => ({ id: c.id, name: c.name }))}
             departments={ref.departments}
-            topics={ref.topics.map((t) => ({ id: t.id, name: t.name }))}
+            topics={topics.map((t) => ({ id: t.id, name: t.name }))}
             postingAs={`${viewer.profile?.fullName ?? "you"} · ${dept?.code ?? "?"} · Batch ${batch?.year ?? "?"}`}
           />
         </div>
