@@ -2187,6 +2187,7 @@ export type Database = {
         Args: { p_case: string; p_no_conflict_attested: boolean; p_reason: string };
         Returns: undefined;
       };
+      cancel_account_deletion: { Args: Record<PropertyKey, never>; Returns: undefined };
       cancel_submission: { Args: { p_id: string }; Returns: undefined };
       complete_onboarding: {
         Args: { p_batch_id: number; p_department_id: number; p_usn: string };
@@ -2222,6 +2223,7 @@ export type Database = {
         Args: { p_reason: string };
         Returns: Database["public"]["Enums"]["user_role"];
       };
+      my_deletion_cancellable: { Args: Record<PropertyKey, never>; Returns: boolean };
       my_moderation_activity: {
         Args: { p_days?: number };
         Returns: {

@@ -104,7 +104,7 @@ begin
     and p.proname not in (
       'search_experiences', 'complete_onboarding', 'get_my_usn', 'save_draft', 'delete_draft',
       'get_my_experience', 'submit_experience', 'withdraw_experience', 'report_experience',
-      'mark_notice_read', 'request_account_deletion', 'request_usn_review', 'object_to_usn_release',
+      'mark_notice_read', 'request_account_deletion', 'cancel_account_deletion', 'my_deletion_cancellable', 'request_usn_review', 'object_to_usn_release',
       'moderate_experience', 'resolve_report', 'moderation_experience_detail',
       'admin_set_user_role', 'admin_correct_name', 'admin_reveal_author', 'admin_get_usn',
       'admin_create_company', 'admin_add_company_alias', 'admin_create_topic', 'admin_rename_topic', 'admin_owner_id', 'admin_list_audit',

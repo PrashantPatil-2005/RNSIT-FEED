@@ -10,6 +10,7 @@ import {
   createUser,
   deleteUser,
   psql,
+  psqlAs,
   sessionCookies,
   setRole,
   waitForApp,
@@ -74,7 +75,41 @@ try {
     "locked account cannot open the editor",
     (await p.locator("form textarea, form input[name='role_title']").count()) === 0,
   );
+
+  // ---------- Member changes their mind ----------
+  await p.goto(`${APP}/account`, { waitUntil: "networkidle" });
+  const cf = p.getByRole("form", { name: "Cancel account deletion" });
+  check("own request offers a cancel button", (await cf.count()) === 1);
+  wait = submitted(p);
+  await cf.getByRole("button", { name: "Cancel deletion" }).click();
+  await wait;
+  await p.waitForURL(/deletion=cancelled/);
+  check("cancel clears the flag", requested(member.id) === "f");
+  check(
+    "account page confirms the cancel and offers delete again",
+    ((await p.textContent("main")) ?? "").includes("Deletion cancelled") &&
+      (await p.getByText("Delete my account", { exact: true }).count()) > 0,
+  );
   await m.ctx.close();
+
+  // ---------- A deletion forced by an admin offers no cancel ----------
+  const forced = createUser("delforced", { onboard: true });
+  users.push(forced);
+  const anAdmin = psql(
+    "select id from public.profiles where role = 'admin' and deletion_requested_at is null limit 1",
+  );
+  psqlAs(
+    anAdmin,
+    `select public.admin_request_user_deletion('${forced.id}', 'Synthetic forced deletion');`,
+  );
+  const fp = await pageFor(forced);
+  await fp.page.goto(`${APP}/account`, { waitUntil: "networkidle" });
+  check(
+    "forced deletion shows no cancel button",
+    (await fp.page.getByRole("form", { name: "Cancel account deletion" }).count()) === 0 &&
+      ((await fp.page.textContent("main")) ?? "").includes("only they can stop it"),
+  );
+  await fp.ctx.close();
 
   // ---------- The only admin is refused ----------
   const admins = Number(

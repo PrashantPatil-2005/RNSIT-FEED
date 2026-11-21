@@ -57,3 +57,23 @@ export async function requestDeletionAction(
   revalidatePath("/", "layout");
   redirect("/account?deletion=requested");
 }
+
+/**
+ * A member takes back their own deletion request before the daily clean-up runs. The database
+ * refuses a deletion that an admin forced, and one that was already carried out.
+ */
+export async function cancelDeletionAction(): Promise<ActionState> {
+  const v = await getViewer();
+  const p = v?.profile;
+  if (!v || !p) return { error: "Sign in to manage your account." };
+  if (!p.deletionRequested) return { error: "There is no deletion request to cancel." };
+  const { error } = await v.db.rpc("cancel_account_deletion");
+  if (error) {
+    if (error.message.includes("admin_requested")) {
+      return { error: "The site team asked for this deletion, so only they can stop it." };
+    }
+    return { error: "That could not be saved. Please reload and try again." };
+  }
+  revalidatePath("/", "layout");
+  redirect("/account?deletion=cancelled");
+}

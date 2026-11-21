@@ -10,7 +10,7 @@ import { roleLabels } from "@/lib/admin/labels";
 import { roleAbilities, staffLinksFor } from "@/lib/auth/permissions";
 import { requireViewer } from "@/lib/auth/session";
 import { getReferenceData } from "@/lib/data/queries";
-import { requestDeletionAction, stepDownAction } from "./actions";
+import { cancelDeletionAction, requestDeletionAction, stepDownAction } from "./actions";
 
 export const metadata: Metadata = { title: "Your account", robots: { index: false } };
 
@@ -26,15 +26,19 @@ export default async function AccountPage({
 }) {
   const params = await searchParams;
   const steppedDown = params.stepped_down === "1";
+  const deletionCancelled = params.deletion === "cancelled";
   const viewer = await requireViewer("/account");
   const profile = viewer.profile;
   if (!profile || !profile.onboarded) redirect("/onboarding");
 
   const isModerator = profile.role === "moderator";
-  const [{ data: usn }, ref, { data: myDepts }] = await Promise.all([
+  const [{ data: usn }, ref, { data: myDepts }, { data: cancellable }] = await Promise.all([
     viewer.db.rpc("get_my_usn"),
     getReferenceData(viewer.db),
     isModerator ? viewer.db.rpc("my_moderator_departments") : Promise.resolve({ data: null }),
+    profile.deletionRequested
+      ? viewer.db.rpc("my_deletion_cancellable")
+      : Promise.resolve({ data: false }),
   ]);
   const dept = ref.departments.find((d) => d.id === profile.departmentId);
   const batch = ref.batches.find((b) => b.id === profile.batchId);
@@ -61,13 +65,29 @@ export default async function AccountPage({
               </p>
             </Notice>
           ) : null}
+          {deletionCancelled && !profile.deletionRequested ? (
+            <Notice title="Deletion cancelled">
+              <p>Your account is active again. Nothing was deleted.</p>
+            </Notice>
+          ) : null}
           {profile.deletionRequested ? (
             <Notice title="Account deletion requested">
               <p>
                 Your account is locked and will be deleted by the next daily clean-up, usually
                 within 24 hours. Your posts, comments, votes, USN and profile are removed, then your
-                login. You can sign out now.
+                login.
               </p>
+              {cancellable ? (
+                <ActionForm
+                  action={cancelDeletionAction}
+                  submitLabel="Cancel deletion"
+                  label="Cancel account deletion"
+                >
+                  <p>Changed your mind? You can keep your account until the clean-up runs.</p>
+                </ActionForm>
+              ) : (
+                <p>The site team asked for this deletion, so only they can stop it.</p>
+              )}
             </Notice>
           ) : null}
           <div className="panel">
